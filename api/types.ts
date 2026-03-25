@@ -1,3 +1,11 @@
+export interface PagedResponse<T> {
+  items: T[];
+  page: number;
+  pageSize: number;
+  totalCount: number;
+  totalPages: number;
+}
+
 export interface ActivResponse {
   activId: number;
   usrId: number;
@@ -59,10 +67,29 @@ export interface CreateOrgRequest {
   address: string | null;
 }
 
+export interface UpdateOrgRequest {
+  orgTypeId: number | null;
+  orgName: string | null;
+  inn: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  address: string | null;
+}
+
 export interface CreatePhysRequest {
   specId: number | null;
   firstName: string | null;
   lastName: string;
+  middleName: string | null;
+  phone: string | null;
+  email: string | null;
+  position: string | null;
+}
+
+export interface UpdatePhysRequest {
+  specId: number | null;
+  firstName: string | null;
+  lastName: string | null;
   middleName: string | null;
   phone: string | null;
   email: string | null;
@@ -110,4 +137,21 @@ export interface UserResponse {
 export interface PolicyResponse {
   policyId: number;
   policyName: string;
+}
+
+export interface CreateUserRequest {
+  firstName: string | null;
+  lastName: string | null;
+  email: string | null;
+  phone: string | null;
+  login: string;
+  password: string;
+  policyIds: number[];
+}
+
+export interface UpdateDrugRequest {
+  drugName: string | null;
+  brand: string | null;
+  form: string | null;
+  description: string | null;
 }

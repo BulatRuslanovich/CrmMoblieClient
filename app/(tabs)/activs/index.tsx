@@ -44,7 +44,7 @@ export default function ActivsScreen() {
     if (isRefresh) setRefreshing(true);
     try {
       const { data } = await activsApi.getAll();
-      setActivs(data);
+      setActivs(data.items);
     } catch { /* ignore */ }
     finally { setLoading(false); setRefreshing(false); }
   }

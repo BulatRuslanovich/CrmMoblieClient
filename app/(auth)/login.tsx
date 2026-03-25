@@ -43,8 +43,11 @@ export default function LoginScreen() {
     setLoading(true);
     try {
       await login(loginVal.trim(), password);
+
+      router.replace('/'); 
     } catch (err: any) {
       const status = err?.response?.status;
+
       if (status === 401 || status === 403) {
         setApiError('Неверный логин или пароль');
       } else if (err?.request && !err?.response) {
@@ -53,6 +56,7 @@ export default function LoginScreen() {
         const data = err?.response?.data;
         setApiError(String(data?.error ?? data?.message ?? 'Произошла ошибка'));
       }
+
     } finally {
       setLoading(false);
     }

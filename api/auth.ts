@@ -1,4 +1,5 @@
 import { apiClient, BASE_URL } from './client';
+import type { UserResponse } from './types';
 import axios from 'axios';
 
 export interface LoginRequest {
@@ -15,19 +16,20 @@ export interface RegisterRequest {
   password: string;
 }
 
-export interface AuthTokens {
+export interface AuthResponse {
   accessToken: string;
   refreshToken: string;
+  user: UserResponse;
 }
 
 export const authApi = {
   login: (data: LoginRequest) =>
-    axios.post<AuthTokens>(`${BASE_URL}/api/auth/login`, data, {
+    axios.post<AuthResponse>(`${BASE_URL}/api/auth/login`, data, {
       headers: { 'Content-Type': 'application/json' },
     }),
 
   register: (data: RegisterRequest) =>
-    axios.post(`${BASE_URL}/api/auth/register`, data, {
+    axios.post<AuthResponse>(`${BASE_URL}/api/auth/register`, data, {
       headers: { 'Content-Type': 'application/json' },
     }),
 

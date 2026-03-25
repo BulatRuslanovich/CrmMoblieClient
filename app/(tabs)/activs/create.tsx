@@ -9,17 +9,17 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme, palette } from '@/constants/design';
 import { activsApi } from '@/api/activs';
 import { orgsApi } from '@/api/orgs';
-import { statusesApi } from '@/api/statuses';
 import { drugsApi } from '@/api/drugs';
-import type { OrgResponse, StatusResponse, DrugResponse } from '@/api/types';
+import type { OrgResponse, DrugResponse } from '@/api/types';
 import { sendInstantNotification, scheduleActivityReminder } from '@/services/notifications';
+
+const STATUS_ID = { planned: 1, open: 2, saved: 3, closed: 4 } as const;
 
 export default function CreateActivScreen() {
   const t = useTheme();
   const router = useRouter();
 
   const [orgId, setOrgId] = useState<number | null>(null);
-  const [statusId, setStatusId] = useState<number | null>(null);
   const [description, setDescription] = useState('');
   const [result, setResult] = useState('');
   const [start, setStart] = useState<Date | null>(null);
@@ -38,12 +38,8 @@ export default function CreateActivScreen() {
 
   async function loadRefs() {
     try {
-      const [o, s, d] = await Promise.all([orgsApi.getAll(), statusesApi.getAll(), drugsApi.getAll()]);
-      setOrgs(o.data); setDrugs(d.data);
-      const planned = s.data.find((st: StatusResponse) =>
-        st.statusName.toLowerCase().includes('запланир')
-      );
-      if (planned) setStatusId(planned.statusId);
+      const [o, d] = await Promise.all([orgsApi.getAll(), drugsApi.getAll()]);
+      setOrgs(o.data.items); setDrugs(d.data.items);
     } catch { Alert.alert('Ошибка', 'Не удалось загрузить справочники'); }
     finally { setLoadingData(false); }
   }
@@ -60,7 +56,7 @@ export default function CreateActivScreen() {
     setSubmitting(true);
     try {
       await activsApi.create({
-        orgId: orgId!, statusId: statusId!,
+        orgId: orgId!, statusId: STATUS_ID.planned,
         description: description || null, result: result || null,
         start: start ? start.toISOString() : null,
         end: null,

@@ -8,7 +8,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
-  Alert,
   ScrollView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -43,6 +42,7 @@ export default function RegisterScreen() {
   });
   const [errors, setErrors] = useState<Partial<Record<FieldKey, string>>>({});
   const [visiblePwd, setVisiblePwd] = useState<Partial<Record<FieldKey, boolean>>>({});
+  const [apiError, setApiError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const { register } = useAuth();
@@ -64,6 +64,7 @@ export default function RegisterScreen() {
 
   async function handleRegister() {
     if (!validate()) return;
+    setApiError(null);
     setLoading(true);
     try {
       await register({
@@ -74,11 +75,19 @@ export default function RegisterScreen() {
         email: form.email || null,
         phone: form.phone || null,
       });
-      Alert.alert('Аккаунт создан', 'Теперь вы можете войти в систему.', [
-        { text: 'Войти', onPress: () => router.replace('/(auth)/login') },
-      ]);
+
+      router.replace('/'); 
     } catch (err: any) {
-      Alert.alert('Ошибка', String(err?.response?.data?.message ?? err?.response?.data ?? 'Ошибка регистрации'));
+      const status = err?.response?.status;
+
+      if (status === 409) {
+        setApiError('Пользователь с таким логином или email уже существует');  //TODO: надо разделить ошибку на логин и email, но пока так
+      } else if (err?.request && !err?.response) {
+        setApiError('Сервер недоступен. Проверьте подключение.');
+      } else {
+        const data = err?.response?.data;
+        setApiError(String(data?.error ?? data?.message ?? 'Произошла ошибка'));
+      }
     } finally {
       setLoading(false);
     }
@@ -158,6 +167,14 @@ export default function RegisterScreen() {
               {errors[key] ? <Text style={s.error}>{errors[key]}</Text> : null}
             </View>
           ))}
+
+          
+          {apiError ? (
+                     <View style={s.apiErrorWrap}>
+                       <Ionicons name="alert-circle-outline" size={16} color="#ef4444" />
+                       <Text style={s.apiErrorText}>{apiError}</Text>
+                     </View>
+          ) : null}
 
           <TouchableOpacity
             style={[s.btn, loading && s.btnDisabled]}
@@ -256,4 +273,11 @@ const s = StyleSheet.create({
 
   loginLink: { alignItems: 'center', marginTop: 20, paddingBottom: 8 },
   loginLinkText: { fontSize: 14 },
+
+  apiErrorWrap: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: '#fef2f2', borderWidth: 1, borderColor: '#fecaca',
+    borderRadius: 12, padding: 12, marginBottom: 12,
+  },
+  apiErrorText: { flex: 1, color: '#ef4444', fontSize: 13, fontWeight: '500' },
 });

@@ -39,12 +39,12 @@ export default function HomeScreen() {
     if (isRefresh) setRefreshing(true);
     try {
       const [a, o, p] = await Promise.all([
-        activsApi.getAll(),
-        orgsApi.getAll(),
-        physesApi.getAll(),
+        activsApi.getAll(0, 100),
+        orgsApi.getAll(0, 100),
+        physesApi.getAll(0, 100),
       ]);
-      setCounts({ activs: a.data.length, orgs: o.data.length, physes: p.data.length });
-      const sorted = [...a.data].sort((x, y) => {
+      setCounts({ activs: a.data.items.length, orgs: o.data.items.length, physes: p.data.items.length });
+      const sorted = [...a.data.items].sort((x, y) => {
         if (!x.start && !y.start) return y.activId - x.activId;
         if (!x.start) return 1;
         if (!y.start) return -1;

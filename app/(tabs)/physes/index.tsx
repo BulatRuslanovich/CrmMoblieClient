@@ -34,7 +34,7 @@ export default function PhysesScreen() {
     if (isRefresh) setRefreshing(true);
     try {
       const { data } = await physesApi.getAll();
-      setPhyses(data);
+      setPhyses(data.items);
     } catch { /* ignore */ }
     finally { setLoading(false); setRefreshing(false); }
   }

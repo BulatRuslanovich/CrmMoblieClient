@@ -47,16 +47,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await AsyncStorage.setItem('accessToken', data.accessToken);
     await AsyncStorage.setItem('refreshToken', data.refreshToken);
     setIsAuthenticated(true);
-    try {
-      const { data: me } = await usersApi.getMe();
-      setUser(me);
-    } catch {
-      // non-critical
-    }
+    const { data: me } = await usersApi.getMe();
+    setUser(me);
   }
 
   async function register(registerData: RegisterRequest) {
-    await authApi.register(registerData);
+    const { data } = await authApi.register(registerData);
+    await AsyncStorage.setItem('accessToken', data.accessToken);
+    await AsyncStorage.setItem('refreshToken', data.refreshToken);
+    setUser(data.user);
+    setIsAuthenticated(true);
   }
 
   async function logout() {

@@ -8,9 +8,15 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme, palette } from '@/constants/design';
 import { activsApi } from '@/api/activs';
-import { statusesApi } from '@/api/statuses';
-import type { ActivResponse, StatusResponse } from '@/api/types';
+import type { ActivResponse } from '@/api/types';
 import { useAuth } from '@/store/auth-context';
+
+const STATUSES = [
+  { statusId: 1, statusName: 'Запланирован' },
+  { statusId: 2, statusName: 'Открыт' },
+  { statusId: 3, statusName: 'Сохранен' },
+  { statusId: 4, statusName: 'Закрыт' },
+] as const;
 
 function fmtDateTime(d: Date) {
   return d.toLocaleString('ru-RU', {
@@ -33,7 +39,6 @@ export default function EditActivScreen() {
   const [description, setDescription] = useState('');
   const [result, setResult] = useState('');
 
-  const [statuses, setStatuses] = useState<StatusResponse[]>([]);
   const [loadingData, setLoadingData] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [openStatusPicker, setOpenStatusPicker] = useState(false);
@@ -42,10 +47,8 @@ export default function EditActivScreen() {
 
   async function loadData() {
     try {
-      const [activRes, statusRes] = await Promise.all([
-        activsApi.getById(Number(id)),
-        statusesApi.getAll(),
-      ]);
+      const activRes = await activsApi.getById(Number(id));
+
       const a = activRes.data;
       setActiv(a);
       setStatusId(a.statusId);
@@ -53,7 +56,6 @@ export default function EditActivScreen() {
       setEnd(a.end ? new Date(a.end) : null);
       setDescription(a.description ?? '');
       setResult(a.result ?? '');
-      setStatuses(statusRes.data);
     } catch {
       Alert.alert('Ошибка', 'Не удалось загрузить визит');
       router.back();
@@ -84,14 +86,15 @@ export default function EditActivScreen() {
     }
   }
 
-  const selectedStatus = statuses.find((s) => s.statusId === statusId);
-  const isClosed = activ?.statusName === 'Закрыт' && !isAdmin;
+  const selectedStatus = STATUSES.find((s) => s.statusId === statusId);
+  const isClosed = activ?.statusId === 4 && !isAdmin;
 
   if (loadingData) return (
     <View style={[s.center, { backgroundColor: t.bg }]}>
       <ActivityIndicator size="large" color={palette.blue} />
     </View>
   );
+
   if (!activ) return null;
 
   return (
@@ -124,13 +127,13 @@ export default function EditActivScreen() {
           </TouchableOpacity>
           {openStatusPicker && !isClosed && (
             <View style={[s.pickerList, { backgroundColor: t.card, borderColor: t.border }]}>
-              {statuses.map((item, idx) => (
+              {STATUSES.map((item, idx) => (
                 <TouchableOpacity
                   key={item.statusId}
                   style={[
                     s.pickerItem,
                     { borderBottomColor: t.border },
-                    idx < statuses.length - 1 && { borderBottomWidth: 1 },
+                    idx < STATUSES.length - 1 && { borderBottomWidth: 1 },
                     statusId === item.statusId && { backgroundColor: `${palette.blue}10` },
                   ]}
                   onPress={() => { setStatusId(item.statusId); setOpenStatusPicker(false); }}

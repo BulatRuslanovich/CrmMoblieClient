@@ -34,15 +34,15 @@ export const lightTheme: Theme = {
 };
 
 export const darkTheme: Theme = {
-  bg: '#0f172a',
-  card: '#1e293b',
-  cardAlt: '#0f172a',
-  border: '#334155',
-  text: '#f1f5f9',
-  sub: '#94a3b8',
-  placeholder: '#475569',
-  inputBg: '#0f172a',
-  shadow: '#00000040',
+  bg: '#0d1117',
+  card: '#161b22',
+  cardAlt: '#010409',
+  border: '#30363d',
+  text: '#e6edf3',
+  sub: '#8b949e',
+  placeholder: '#6e7681',
+  inputBg: '#0d1117',
+  shadow: '#00000066',
 };
 
 export function useTheme(): Theme {

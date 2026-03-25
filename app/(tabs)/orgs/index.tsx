@@ -34,7 +34,7 @@ export default function OrgsScreen() {
     if (isRefresh) setRefreshing(true);
     try {
       const { data } = await orgsApi.getAll();
-      setOrgs(data);
+      setOrgs(data.items);
     } catch { /* ignore */ }
     finally { setLoading(false); setRefreshing(false); }
   }

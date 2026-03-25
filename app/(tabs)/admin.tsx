@@ -80,7 +80,7 @@ function UsersSection({ t }: { t: Theme }) {
   async function loadData() {
     try {
       const [u, p] = await Promise.all([usersApi.getAll(), policiesApi.getAll()]);
-      setUsers(u.data);
+      setUsers(u.data.items);
       setPolicies(p.data);
     } catch { Alert.alert('Ошибка', 'Не удалось загрузить пользователей'); }
     finally { setLoading(false); }
@@ -89,11 +89,12 @@ function UsersSection({ t }: { t: Theme }) {
   async function togglePolicy(userId: number, policyId: number, has: boolean) {
     const key = `${userId}-${policyId}`;
     setActionKey(key);
+
     try {
       if (has) {
-        await usersApi.removePolicy(userId, policyId);
+        await usersApi.unlinkPolicy(userId, policyId);
       } else {
-        await usersApi.addPolicy(userId, policyId);
+        await usersApi.linkPolicy(userId, policyId);
       }
       const { data } = await usersApi.getById(userId);
       setUsers((prev) => prev.map((u) => u.usrId === userId ? data : u));
@@ -277,8 +278,8 @@ function DrugsSection({ t }: { t: Theme }) {
 
   async function loadDrugs() {
     try {
-      const { data } = await drugsApi.getAll();
-      setDrugs(data);
+      const { data } = await drugsApi.getAll(0, 100);
+      setDrugs(data.items);
     } catch { Alert.alert('Ошибка', 'Не удалось загрузить препараты'); }
     finally { setLoading(false); }
   }

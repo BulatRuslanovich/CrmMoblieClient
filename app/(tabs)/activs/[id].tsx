@@ -7,9 +7,10 @@ import { useLocalSearchParams, useRouter, useNavigation } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme, palette } from '@/constants/design';
 import { activsApi } from '@/api/activs';
-import { statusesApi } from '@/api/statuses';
-import type { ActivResponse, StatusResponse } from '@/api/types';
+import type { ActivResponse } from '@/api/types';
 import { useAuth } from '@/store/auth-context';
+
+const STATUS_ID = { planned: 1, open: 2, saved: 3, closed: 4 } as const;
 
 function fmtDate(d: string | null) {
   if (!d) return '—';
@@ -27,24 +28,18 @@ export default function ActivDetailScreen() {
   const isAdmin = user?.policies.includes('Admin') ?? false;
 
   const [activ, setActiv] = useState<ActivResponse | null>(null);
-  const [statuses, setStatuses] = useState<StatusResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
 
   useEffect(() => { load(); }, [id]);
 
-  function statusIdByName(name: string) {
-    return statuses.find((s) => s.statusName === name)?.statusId ?? null;
-  }
-
   async function handleOpenVisit() {
-    const statusId = statusIdByName('Открыт');
-    if (!statusId || !activ) return;
+    if (!activ) return;
     setActionLoading(true);
     try {
       await activsApi.update(Number(id), {
-        statusId, start: new Date().toISOString(),
+        statusId: STATUS_ID.open, start: new Date().toISOString(),
         end: activ.end, description: activ.description, result: activ.result,
       });
       await load();
@@ -53,12 +48,11 @@ export default function ActivDetailScreen() {
   }
 
   async function handleSaveVisit() {
-    const statusId = statusIdByName('Сохранен');
-    if (!statusId || !activ) return;
+    if (!activ) return;
     setActionLoading(true);
     try {
       await activsApi.update(Number(id), {
-        statusId, start: activ.start,
+        statusId: STATUS_ID.saved, start: activ.start,
         end: activ.end, description: activ.description, result: activ.result,
       });
       await load();
@@ -67,12 +61,11 @@ export default function ActivDetailScreen() {
   }
 
   async function handleCloseVisit() {
-    const statusId = statusIdByName('Закрыт');
-    if (!statusId || !activ) return;
+    if (!activ) return;
     setActionLoading(true);
     try {
       await activsApi.update(Number(id), {
-        statusId, start: activ.start,
+        statusId: STATUS_ID.closed, start: activ.start,
         end: new Date().toISOString(), description: activ.description, result: activ.result,
       });
       await load();
@@ -82,11 +75,7 @@ export default function ActivDetailScreen() {
 
   async function load() {
     try {
-      const [{ data }, { data: statusData }] = await Promise.all([
-        activsApi.getById(Number(id)),
-        statusesApi.getAll(),
-      ]);
-      setStatuses(statusData);
+      const { data } = await activsApi.getById(Number(id));
       setActiv(data);
       navigation.setOptions({
         title: data.orgName,
