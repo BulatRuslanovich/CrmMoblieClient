@@ -278,7 +278,7 @@ function DrugsSection({ t }: { t: Theme }) {
 
   async function loadDrugs() {
     try {
-      const { data } = await drugsApi.getAll(0, 100);
+      const { data } = await drugsApi.getAll(1, 100);
       setDrugs(data.items);
     } catch { Alert.alert('Ошибка', 'Не удалось загрузить препараты'); }
     finally { setLoading(false); }

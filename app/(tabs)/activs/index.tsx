@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity,
   StyleSheet, ActivityIndicator, RefreshControl, TextInput,
@@ -37,22 +37,34 @@ export default function ActivsScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [error, setError] = useState(false);
+
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+  }, [search]);
 
   useFocusEffect(useCallback(() => { load(); }, []));
 
   async function load(isRefresh = false) {
     if (isRefresh) setRefreshing(true);
+    else setError(false);
     try {
       const { data } = await activsApi.getAll();
       setActivs(data.items);
-    } catch { /* ignore */ }
-    finally { setLoading(false); setRefreshing(false); }
+    } catch {
+      setError(true);
+    } finally { setLoading(false); setRefreshing(false); }
   }
 
   const filtered = activs.filter(
     (a) =>
-      a.orgName.toLowerCase().includes(search.toLowerCase()) ||
-      a.statusName.toLowerCase().includes(search.toLowerCase())
+      a.orgName.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+      a.statusName.toLowerCase().includes(debouncedSearch.toLowerCase())
   );
 
   const sorted = [...filtered].sort((a, b) => {
@@ -77,6 +89,20 @@ export default function ActivsScreen() {
   if (loading) return (
     <View style={[s.center, { backgroundColor: t.bg }]}>
       <ActivityIndicator size="large" color={palette.blue} />
+    </View>
+  );
+
+  if (error) return (
+    <View style={[s.center, { backgroundColor: t.bg }]}>
+      <Ionicons name="cloud-offline-outline" size={48} color={t.placeholder} />
+      <Text style={[s.emptyTitle, { color: t.text, marginTop: 12 }]}>Не удалось загрузить</Text>
+      <Text style={[s.emptySub, { color: t.sub }]}>Проверьте подключение к интернету</Text>
+      <TouchableOpacity
+        style={[s.emptyBtn, { backgroundColor: palette.blue, marginTop: 16 }]}
+        onPress={() => load()}
+      >
+        <Text style={s.emptyBtnText}>Повторить</Text>
+      </TouchableOpacity>
     </View>
   );
 

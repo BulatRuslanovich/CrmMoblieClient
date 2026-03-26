@@ -27,6 +27,8 @@ export default function ActivDetailScreen() {
   const { user } = useAuth();
   const isAdmin = user?.policies.includes('Admin') ?? false;
 
+  const numId = Number(id);
+
   const [activ, setActiv] = useState<ActivResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
@@ -38,7 +40,7 @@ export default function ActivDetailScreen() {
     if (!activ) return;
     setActionLoading(true);
     try {
-      await activsApi.update(Number(id), {
+      await activsApi.update(numId, {
         statusId: STATUS_ID.open, start: new Date().toISOString(),
         end: activ.end, description: activ.description, result: activ.result,
       });
@@ -51,7 +53,7 @@ export default function ActivDetailScreen() {
     if (!activ) return;
     setActionLoading(true);
     try {
-      await activsApi.update(Number(id), {
+      await activsApi.update(numId, {
         statusId: STATUS_ID.saved, start: activ.start,
         end: activ.end, description: activ.description, result: activ.result,
       });
@@ -64,7 +66,7 @@ export default function ActivDetailScreen() {
     if (!activ) return;
     setActionLoading(true);
     try {
-      await activsApi.update(Number(id), {
+      await activsApi.update(numId, {
         statusId: STATUS_ID.closed, start: activ.start,
         end: new Date().toISOString(), description: activ.description, result: activ.result,
       });
@@ -74,8 +76,12 @@ export default function ActivDetailScreen() {
   }
 
   async function load() {
+    if (isNaN(numId)) {
+      router.back();
+      return;
+    }
     try {
-      const { data } = await activsApi.getById(Number(id));
+      const { data } = await activsApi.getById(numId);
       setActiv(data);
       navigation.setOptions({
         title: data.orgName,
@@ -102,7 +108,7 @@ export default function ActivDetailScreen() {
         text: 'Удалить', style: 'destructive',
         onPress: async () => {
           setDeleting(true);
-          try { await activsApi.delete(Number(id)); router.back(); }
+          try { await activsApi.delete(numId); router.back(); }
           catch { Alert.alert('Ошибка', 'Не удалось удалить'); }
           finally { setDeleting(false); }
         },
