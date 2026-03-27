@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   ScrollView, ActivityIndicator, Alert,
@@ -6,6 +6,8 @@ import {
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme, palette } from '@/constants/design';
+import { FieldBlock } from '@/components/FieldBlock';
+import { Selector, PickerList } from '@/components/Selector';
 import { physesApi } from '@/api/physes';
 import { specsApi } from '@/api/specs';
 import type { SpecResponse } from '@/api/types';
@@ -29,9 +31,7 @@ export default function CreatePhysScreen() {
   const [loadingData, setLoadingData] = useState(true);
   const [openSpecPicker, setOpenSpecPicker] = useState(false);
 
-  useEffect(() => { loadRefs(); }, []);
-
-  async function loadRefs() {
+  const loadRefs = useCallback(async () => {
     try {
       const { data } = await specsApi.getAll();
       setSpecs(data);
@@ -40,7 +40,9 @@ export default function CreatePhysScreen() {
     } finally {
       setLoadingData(false);
     }
-  }
+  }, []);
+
+  useEffect(() => { loadRefs(); }, [loadRefs]);
 
   function validate() {
     const e: Record<string, string> = {};
@@ -84,7 +86,6 @@ export default function CreatePhysScreen() {
       contentContainerStyle={s.content}
       keyboardShouldPersistTaps="handled"
     >
-      {/* Фамилия */}
       <FieldBlock label="Фамилия" required error={errors.lastName} t={t}>
         <View style={[s.inputWrap, { backgroundColor: t.inputBg, borderColor: errors.lastName ? palette.red : t.border }]}>
           <Ionicons name="person-outline" size={16} color={t.placeholder} />
@@ -97,7 +98,6 @@ export default function CreatePhysScreen() {
         </View>
       </FieldBlock>
 
-      {/* Имя и Отчество */}
       <View style={s.row}>
         <View style={s.half}>
           <FieldBlock label="Имя" t={t}>
@@ -127,48 +127,25 @@ export default function CreatePhysScreen() {
         </View>
       </View>
 
-      {/* Специализация */}
       <FieldBlock label="Специализация" t={t}>
-        <TouchableOpacity
-          style={[s.selector, { backgroundColor: t.inputBg, borderColor: t.border }]}
-          onPress={() => setOpenSpecPicker((v) => !v)}
-          activeOpacity={0.8}
-        >
-          <Ionicons name="medical-outline" size={18} color={selectedSpec ? palette.orange : t.placeholder} />
-          <Text style={[s.selectorText, { color: selectedSpec ? t.text : t.placeholder }]} numberOfLines={1}>
-            {selectedSpec?.specName ?? 'Выберите специализацию'}
-          </Text>
-          {specId !== null && (
-            <TouchableOpacity onPress={() => setSpecId(null)} hitSlop={8}>
-              <Ionicons name="close-circle" size={16} color={t.placeholder} />
-            </TouchableOpacity>
-          )}
-          <Ionicons name={openSpecPicker ? 'chevron-up' : 'chevron-down'} size={16} color={t.placeholder} />
-        </TouchableOpacity>
+        <Selector
+          value={selectedSpec?.specName ?? null}
+          placeholder="Выберите специализацию"
+          icon="medical-outline"
+          open={openSpecPicker}
+          onToggle={() => setOpenSpecPicker((v) => !v)}
+          t={t}
+        />
         {openSpecPicker && (
-          <View style={[s.pickerList, { backgroundColor: t.card, borderColor: t.border }]}>
-            {specs.map((item, idx) => (
-              <TouchableOpacity
-                key={item.specId}
-                style={[
-                  s.pickerItem,
-                  { borderBottomColor: t.border },
-                  idx < specs.length - 1 && { borderBottomWidth: 1 },
-                  specId === item.specId && { backgroundColor: `${palette.orange}10` },
-                ]}
-                onPress={() => { setSpecId(item.specId); setOpenSpecPicker(false); }}
-              >
-                <Text style={[s.pickerItemLabel, { color: t.text }]}>{item.specName}</Text>
-                {specId === item.specId && (
-                  <Ionicons name="checkmark-circle" size={18} color={palette.orange} />
-                )}
-              </TouchableOpacity>
-            ))}
-          </View>
+          <PickerList
+            items={specs.map((sp) => ({ id: sp.specId, label: sp.specName }))}
+            selectedId={specId}
+            onSelect={(id) => { setSpecId(id); setOpenSpecPicker(false); }}
+            t={t} accentColor={palette.orange}
+          />
         )}
       </FieldBlock>
 
-      {/* Должность */}
       <FieldBlock label="Должность" t={t}>
         <View style={[s.inputWrap, { backgroundColor: t.inputBg, borderColor: t.border }]}>
           <Ionicons name="briefcase-outline" size={16} color={t.placeholder} />
@@ -181,7 +158,6 @@ export default function CreatePhysScreen() {
         </View>
       </FieldBlock>
 
-      {/* Телефон */}
       <FieldBlock label="Телефон" t={t}>
         <View style={[s.inputWrap, { backgroundColor: t.inputBg, borderColor: t.border }]}>
           <Ionicons name="call-outline" size={16} color={t.placeholder} />
@@ -195,7 +171,6 @@ export default function CreatePhysScreen() {
         </View>
       </FieldBlock>
 
-      {/* Email */}
       <FieldBlock label="Email" t={t}>
         <View style={[s.inputWrap, { backgroundColor: t.inputBg, borderColor: t.border }]}>
           <Ionicons name="mail-outline" size={16} color={t.placeholder} />
@@ -210,7 +185,6 @@ export default function CreatePhysScreen() {
         </View>
       </FieldBlock>
 
-      {/* Submit */}
       <TouchableOpacity
         style={[s.submitBtn, submitting && s.disabled]}
         onPress={handleSubmit}
@@ -228,33 +202,9 @@ export default function CreatePhysScreen() {
   );
 }
 
-function FieldBlock({
-  label, required, error, t, children,
-}: {
-  label: string; required?: boolean; error?: string;
-  t: ReturnType<typeof useTheme>; children: React.ReactNode;
-}) {
-  return (
-    <View style={s.fieldBlock}>
-      <View style={s.labelRow}>
-        <Text style={[s.label, { color: t.sub }]}>{label}</Text>
-        {required && <Text style={s.required}>*</Text>}
-      </View>
-      {children}
-      {error ? <Text style={s.error}>{error}</Text> : null}
-    </View>
-  );
-}
-
 const s = StyleSheet.create({
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   content: { padding: 16, gap: 4, paddingBottom: 40 },
-
-  fieldBlock: { marginBottom: 12 },
-  labelRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 8 },
-  label: { fontSize: 13, fontWeight: '600', letterSpacing: 0.2 },
-  required: { color: palette.red, fontWeight: '700', fontSize: 13 },
-  error: { color: palette.red, fontSize: 12, marginTop: 4, marginLeft: 2 },
 
   row: { flexDirection: 'row', gap: 10 },
   half: { flex: 1 },
@@ -264,19 +214,6 @@ const s = StyleSheet.create({
     borderWidth: 1.5, borderRadius: 14, paddingHorizontal: 12, height: 50,
   },
   input: { flex: 1, fontSize: 14 },
-
-  selector: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
-    borderWidth: 1.5, borderRadius: 14, paddingHorizontal: 14, height: 50,
-  },
-  selectorText: { flex: 1, fontSize: 15 },
-
-  pickerList: {
-    borderWidth: 1.5, borderRadius: 14, marginTop: 6,
-    maxHeight: 220, overflow: 'hidden',
-  },
-  pickerItem: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 12 },
-  pickerItemLabel: { flex: 1, fontSize: 15, fontWeight: '500' },
 
   submitBtn: {
     backgroundColor: palette.orange, borderRadius: 16, height: 54,

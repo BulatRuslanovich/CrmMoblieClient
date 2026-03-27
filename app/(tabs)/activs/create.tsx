@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   ScrollView, ActivityIndicator, Alert,
@@ -6,6 +6,8 @@ import {
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme, palette } from '@/constants/design';
+import { FieldBlock } from '@/components/FieldBlock';
+import { Selector, PickerList } from '@/components/Selector';
 import { DatePickerField } from '@/components/DatePickerField';
 import { activsApi } from '@/api/activs';
 import { orgsApi } from '@/api/orgs';
@@ -34,15 +36,15 @@ export default function CreateActivScreen() {
 
   const [openPicker, setOpenPicker] = useState<'org' | 'drug' | null>(null);
 
-  useEffect(() => { loadRefs(); }, []);
-
-  async function loadRefs() {
+  const loadRefs = useCallback(async () => {
     try {
       const [o, d] = await Promise.all([orgsApi.getAll(), drugsApi.getAll()]);
       setOrgs(o.data.items); setDrugs(d.data.items);
     } catch { Alert.alert('Ошибка', 'Не удалось загрузить справочники'); }
     finally { setLoadingData(false); }
-  }
+  }, []);
+
+  useEffect(() => { loadRefs(); }, [loadRefs]);
 
   function validate() {
     const e: Record<string, string> = {};
@@ -91,7 +93,6 @@ export default function CreateActivScreen() {
       contentContainerStyle={s.content}
       keyboardShouldPersistTaps="handled"
     >
-      {/* Org */}
       <FieldBlock label="Организация" required error={errors.orgId} t={t}>
         <Selector
           value={selectedOrg?.orgName ?? null}
@@ -111,13 +112,10 @@ export default function CreateActivScreen() {
         )}
       </FieldBlock>
 
-
-      {/* Dates */}
       <FieldBlock label="Дата начала" t={t}>
         <DatePickerField value={start} onChange={setStart} placeholder="Не задано" minimumDate={new Date()} />
       </FieldBlock>
 
-      {/* Description */}
       <FieldBlock label="Описание" t={t}>
         <View style={[s.textareaWrap, { backgroundColor: t.inputBg, borderColor: t.border }]}>
           <TextInput
@@ -130,7 +128,6 @@ export default function CreateActivScreen() {
         </View>
       </FieldBlock>
 
-      {/* Result */}
       <FieldBlock label="Результат" t={t}>
         <View style={[s.textareaWrap, { backgroundColor: t.inputBg, borderColor: t.border }]}>
           <TextInput
@@ -143,7 +140,6 @@ export default function CreateActivScreen() {
         </View>
       </FieldBlock>
 
-      {/* Drugs */}
       <FieldBlock label={`Препараты${selectedDrugIds.length ? ` (${selectedDrugIds.length})` : ''}`} t={t}>
         <Selector
           value={selectedDrugIds.length ? `Выбрано: ${selectedDrugIds.length}` : null}
@@ -180,7 +176,6 @@ export default function CreateActivScreen() {
         )}
       </FieldBlock>
 
-      {/* Submit */}
       <TouchableOpacity
         style={[s.submitBtn, submitting && s.disabled]}
         onPress={handleSubmit}
@@ -199,103 +194,9 @@ export default function CreateActivScreen() {
 }
 
 
-function FieldBlock({
-  label, required, error, t, children,
-}: {
-  label: string; required?: boolean; error?: string;
-  t: ReturnType<typeof useTheme>; children: React.ReactNode;
-}) {
-  return (
-    <View style={s.fieldBlock}>
-      <View style={s.labelRow}>
-        <Text style={[s.label, { color: t.sub }]}>{label}</Text>
-        {required && <Text style={s.required}>*</Text>}
-      </View>
-      {children}
-      {error ? <Text style={s.error}>{error}</Text> : null}
-    </View>
-  );
-}
-
-function Selector({
-  value, placeholder, icon, open, onToggle, t, error,
-}: {
-  value: string | null; placeholder: string;
-  icon: keyof typeof Ionicons.glyphMap;
-  open: boolean; onToggle: () => void;
-  t: ReturnType<typeof useTheme>; error?: boolean;
-}) {
-  return (
-    <TouchableOpacity
-      style={[s.selector, { backgroundColor: t.inputBg, borderColor: error ? palette.red : t.border }]}
-      onPress={onToggle} activeOpacity={0.8}
-    >
-      <Ionicons name={icon} size={18} color={value ? palette.blue : t.placeholder} />
-      <Text style={[s.selectorText, { color: value ? t.text : t.placeholder }]} numberOfLines={1}>
-        {value ?? placeholder}
-      </Text>
-      <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={16} color={t.placeholder} />
-    </TouchableOpacity>
-  );
-}
-
-function PickerList({
-  items, selectedId, onSelect, t,
-}: {
-  items: { id: number; label: string; sub?: string }[];
-  selectedId: number | null; onSelect: (id: number) => void;
-  t: ReturnType<typeof useTheme>;
-}) {
-  return (
-    <View style={[s.pickerList, { backgroundColor: t.card, borderColor: t.border }]}>
-      {items.map((item, idx) => (
-        <TouchableOpacity
-          key={item.id}
-          style={[
-            s.pickerItem,
-            { borderBottomColor: t.border },
-            idx < items.length - 1 && { borderBottomWidth: 1 },
-            selectedId === item.id && { backgroundColor: `${palette.blue}10` },
-          ]}
-          onPress={() => onSelect(item.id)}
-        >
-          <View style={s.pickerItemContent}>
-            <Text style={[s.pickerItemLabel, { color: t.text }]}>{item.label}</Text>
-            {item.sub ? <Text style={[s.pickerItemSub, { color: t.sub }]}>{item.sub}</Text> : null}
-          </View>
-          {selectedId === item.id && (
-            <Ionicons name="checkmark-circle" size={18} color={palette.blue} />
-          )}
-        </TouchableOpacity>
-      ))}
-    </View>
-  );
-}
-
-
 const s = StyleSheet.create({
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   content: { padding: 16, gap: 4, paddingBottom: 40 },
-
-  fieldBlock: { marginBottom: 12 },
-  labelRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 8 },
-  label: { fontSize: 13, fontWeight: '600', letterSpacing: 0.2 },
-  required: { color: palette.red, fontWeight: '700', fontSize: 13 },
-  error: { color: palette.red, fontSize: 12, marginTop: 4, marginLeft: 2 },
-
-  selector: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
-    borderWidth: 1.5, borderRadius: 14, paddingHorizontal: 14, height: 50,
-  },
-  selectorText: { flex: 1, fontSize: 15 },
-  pickerList: {
-    borderWidth: 1.5, borderRadius: 14, marginTop: 6,
-    maxHeight: 220, overflow: 'hidden',
-  },
-  pickerItem: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 12 },
-  pickerItemContent: { flex: 1 },
-  pickerItemLabel: { fontSize: 15, fontWeight: '500' },
-  pickerItemSub: { fontSize: 12, marginTop: 1 },
 
   inputWrap: {
     flexDirection: 'row', alignItems: 'center', gap: 8,

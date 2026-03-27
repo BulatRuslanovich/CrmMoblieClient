@@ -1,4 +1,8 @@
+import { Platform } from 'react-native';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+
+// Extra bottom padding to clear the floating tab bar (height 64 + bottom offset + breathing room)
+export const TAB_BAR_CLEARANCE = Platform.OS === 'ios' ? 108 : 92;
 
 export const palette = {
   blue: '#3b82f6',
@@ -48,4 +52,14 @@ export const darkTheme: Theme = {
 export function useTheme(): Theme {
   const scheme = useColorScheme();
   return scheme === 'dark' ? darkTheme : lightTheme;
+}
+
+export function useStackScreenOptions() {
+  const t = useTheme();
+  return {
+    headerStyle: { backgroundColor: t.bg },
+    headerShadowVisible: false,
+    headerTintColor: t.text,
+    headerTitleStyle: { fontWeight: '700' as const, fontSize: 18 },
+  };
 }

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   ScrollView, ActivityIndicator, Alert,
@@ -6,17 +6,12 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme, palette } from '@/constants/design';
+import { FieldBlock } from '@/components/FieldBlock';
+import { STATUSES } from '@/constants/activs';
 import { DatePickerField } from '@/components/DatePickerField';
 import { activsApi } from '@/api/activs';
 import type { ActivResponse } from '@/api/types';
 import { useAuth } from '@/store/auth-context';
-
-const STATUSES = [
-  { statusId: 1, statusName: 'Запланирован' },
-  { statusId: 2, statusName: 'Открыт' },
-  { statusId: 3, statusName: 'Сохранен' },
-  { statusId: 4, statusName: 'Закрыт' },
-] as const;
 
 
 export default function EditActivScreen() {
@@ -37,9 +32,7 @@ export default function EditActivScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [openStatusPicker, setOpenStatusPicker] = useState(false);
 
-  useEffect(() => { loadData(); }, [id]);
-
-  async function loadData() {
+  const loadData = useCallback(async () => {
     try {
       const activRes = await activsApi.getById(Number(id));
 
@@ -56,7 +49,9 @@ export default function EditActivScreen() {
     } finally {
       setLoadingData(false);
     }
-  }
+  }, [id, router]);
+
+  useEffect(() => { loadData(); }, [loadData]);
 
   async function handleSubmit() {
     if (!statusId) {
@@ -97,7 +92,6 @@ export default function EditActivScreen() {
       contentContainerStyle={s.content}
       keyboardShouldPersistTaps="handled"
     >
-      {/* Баннер закрытого визита */}
       {isClosed && (
         <View style={[s.closedBanner, { backgroundColor: `${palette.red}12`, borderColor: `${palette.red}30` }]}>
           <Ionicons name="lock-closed" size={16} color={palette.red} />
@@ -105,7 +99,6 @@ export default function EditActivScreen() {
         </View>
       )}
 
-      {/* Статус — только для админа */}
       {isAdmin && (
         <FieldBlock label="Статус" required t={t}>
           <TouchableOpacity
@@ -143,7 +136,6 @@ export default function EditActivScreen() {
         </FieldBlock>
       )}
 
-      {/* Даты — только для админа */}
       {isAdmin && (
         <View style={s.row}>
           <View style={s.half}>
@@ -159,7 +151,6 @@ export default function EditActivScreen() {
         </View>
       )}
 
-      {/* Описание */}
       <FieldBlock label="Описание" t={t}>
         <View style={[s.textareaWrap, { backgroundColor: t.inputBg, borderColor: t.border }, isClosed && s.fieldDisabled]}>
           <TextInput
@@ -173,7 +164,6 @@ export default function EditActivScreen() {
         </View>
       </FieldBlock>
 
-      {/* Результат */}
       <FieldBlock label="Результат" t={t}>
         <View style={[s.textareaWrap, { backgroundColor: t.inputBg, borderColor: t.border }, isClosed && s.fieldDisabled]}>
           <TextInput
@@ -187,7 +177,6 @@ export default function EditActivScreen() {
         </View>
       </FieldBlock>
 
-      {/* Submit */}
       {!isClosed && (
         <TouchableOpacity
           style={[s.submitBtn, submitting && s.disabled]}
@@ -208,31 +197,9 @@ export default function EditActivScreen() {
 }
 
 
-function FieldBlock({
-  label, required, t, children,
-}: {
-  label: string; required?: boolean;
-  t: ReturnType<typeof useTheme>; children: React.ReactNode;
-}) {
-  return (
-    <View style={s.fieldBlock}>
-      <View style={s.labelRow}>
-        <Text style={[s.label, { color: t.sub }]}>{label}</Text>
-        {required && <Text style={s.required}>*</Text>}
-      </View>
-      {children}
-    </View>
-  );
-}
-
 const s = StyleSheet.create({
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   content: { padding: 16, gap: 4, paddingBottom: 40 },
-
-  fieldBlock: { marginBottom: 12 },
-  labelRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 8 },
-  label: { fontSize: 13, fontWeight: '600', letterSpacing: 0.2 },
-  required: { color: palette.red, fontWeight: '700', fontSize: 13 },
 
   row: { flexDirection: 'row', gap: 10 },
   half: { flex: 1 },

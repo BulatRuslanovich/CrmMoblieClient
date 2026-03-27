@@ -56,12 +56,10 @@ export default function LoginScreen() {
       style={[s.flex, { backgroundColor: t.bg }]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      {/* Фоновые декоративные круги */}
       <View style={[s.bgCircle1, { backgroundColor: `${palette.blue}10` }]} />
       <View style={[s.bgCircle2, { backgroundColor: `${palette.blue}07` }]} />
 
       <ScrollView contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled">
-        {/* Hero */}
         <View style={s.hero}>
           <View style={[s.logoRing, { backgroundColor: `${palette.blue}18` }]}>
             <View style={s.logoInner}>
@@ -72,10 +70,8 @@ export default function LoginScreen() {
           <Text style={[s.heroSub, { color: t.sub }]}>Войдите для доступа к системе</Text>
         </View>
 
-        {/* Card */}
         <View style={[s.card, { backgroundColor: t.card }]}>
 
-          {/* Login field */}
           <View style={s.fieldWrap}>
             <Text style={[s.label, { color: t.sub }]}>Логин</Text>
             <View style={[s.inputWrap, { backgroundColor: t.inputBg, borderColor: errors.login ? palette.red : t.border }]}>
@@ -98,7 +94,6 @@ export default function LoginScreen() {
             {errors.login ? <Text style={s.error}>{errors.login}</Text> : null}
           </View>
 
-          {/* Password field */}
           <View style={s.fieldWrap}>
             <Text style={[s.label, { color: t.sub }]}>Пароль</Text>
             <View style={[s.inputWrap, { backgroundColor: t.inputBg, borderColor: errors.password ? palette.red : t.border }]}>
@@ -118,7 +113,6 @@ export default function LoginScreen() {
             {errors.password ? <Text style={s.error}>{errors.password}</Text> : null}
           </View>
 
-          {/* API error */}
           {apiError ? (
             <View style={[s.apiErrorWrap, { backgroundColor: `${palette.red}10`, borderColor: `${palette.red}30` }]}>
               <Ionicons name="alert-circle-outline" size={16} color={palette.red} />
@@ -126,7 +120,6 @@ export default function LoginScreen() {
             </View>
           ) : null}
 
-          {/* Submit */}
           <TouchableOpacity
             style={[s.btn, loading && s.btnDisabled]}
             onPress={handleLogin}
@@ -141,14 +134,12 @@ export default function LoginScreen() {
             )}
           </TouchableOpacity>
 
-          {/* Divider */}
           <View style={s.divider}>
             <View style={[s.dividerLine, { backgroundColor: t.border }]} />
             <Text style={[s.dividerText, { color: t.placeholder }]}>или</Text>
             <View style={[s.dividerLine, { backgroundColor: t.border }]} />
           </View>
-
-          {/* Register link */}
+          
           <TouchableOpacity
             style={[s.outlineBtn, { borderColor: t.border }]}
             onPress={() => router.push('/(auth)/register')}

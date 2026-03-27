@@ -5,7 +5,8 @@ import {
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useTheme, palette } from '@/constants/design';
+import { useTheme, palette, TAB_BAR_CLEARANCE } from '@/constants/design';
+import { STATUSES } from '@/constants/activs';
 import { activsApi } from '@/api/activs';
 import type { ActivResponse } from '@/api/types';
 
@@ -48,9 +49,7 @@ export default function ActivsScreen() {
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   }, [search]);
 
-  useFocusEffect(useCallback(() => { load(); }, []));
-
-  async function load(isRefresh = false) {
+  const load = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
     else setError(false);
     try {
@@ -59,7 +58,9 @@ export default function ActivsScreen() {
     } catch {
       setError(true);
     } finally { setLoading(false); setRefreshing(false); }
-  }
+  }, []);
+
+  useFocusEffect(useCallback(() => { load(); }, [load]));
 
   const filtered = activs.filter(
     (a) =>
@@ -108,7 +109,6 @@ export default function ActivsScreen() {
 
   return (
     <View style={[s.flex, { backgroundColor: t.bg }]}>
-      {/* Search bar */}
       <View style={[s.searchWrap, { backgroundColor: t.bg }]}>
         <View style={[s.searchBox, { backgroundColor: t.card, borderColor: t.border }]}>
           <Ionicons name="search" size={16} color={t.placeholder} />
@@ -134,7 +134,6 @@ export default function ActivsScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Count */}
       {filtered.length > 0 && (
         <Text style={[s.count, { color: t.sub }]}>
           {filtered.length} визит{filtered.length !== 1 ? (filtered.length < 5 ? 'а' : 'ов') : ''}
@@ -144,7 +143,7 @@ export default function ActivsScreen() {
       <FlatList
         data={listItems}
         keyExtractor={(item) => item.type === 'header' ? `h-${item.label}` : String(item.data.activId)}
-        contentContainerStyle={filtered.length === 0 ? s.emptyContainer : { paddingHorizontal: 16, paddingBottom: 24 }}
+        contentContainerStyle={filtered.length === 0 ? s.emptyContainer : { paddingHorizontal: 16, paddingBottom: TAB_BAR_CLEARANCE }}
         renderItem={({ item }) =>
           item.type === 'header'
             ? <DateHeader label={item.label} t={t} />
@@ -188,20 +187,10 @@ function DateHeader({ label, t }: { label: string; t: ReturnType<typeof useTheme
   );
 }
 
-function statusColor(name: string | undefined): string {
-  switch (name) {
-    case 'Запланирован': return palette.blue;
-    case 'Открыт':       return palette.orange;
-    case 'Сохранен':     return palette.purple;
-    case 'Закрыт':       return palette.green;
-    default:             return palette.blue;
-  }
-}
-
 function ActivCard({ item, t }: { item: ActivResponse; t: ReturnType<typeof useTheme> }) {
   const router = useRouter();
   const date = formatDate(item.start);
-  const color = statusColor(item.statusName);
+  const color = STATUSES.find((s) => s.statusName === item.statusName)?.color;
 
   return (
     <TouchableOpacity

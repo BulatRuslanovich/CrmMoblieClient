@@ -5,17 +5,12 @@ import {
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useTheme, palette } from '@/constants/design';
+import { useTheme, palette, TAB_BAR_CLEARANCE } from '@/constants/design';
+import { avatarColor } from '@/utils/avatarColor';
 import { physesApi } from '@/api/physes';
 import type { PhysResponse } from '@/api/types';
 import { useAuth } from '@/store/auth-context';
 
-const AVATAR_COLORS = ['#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#10b981', '#3b82f6'];
-function avatarColor(name: string) {
-  let h = 0;
-  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) % AVATAR_COLORS.length;
-  return AVATAR_COLORS[h];
-}
 
 export default function PhysesScreen() {
   const t = useTheme();
@@ -26,18 +21,20 @@ export default function PhysesScreen() {
   const [physes, setPhyses] = useState<PhysResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState(false);
   const [search, setSearch] = useState('');
 
-  useFocusEffect(useCallback(() => { load(); }, []));
-
-  async function load(isRefresh = false) {
+  const load = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
+    else setError(false);
     try {
       const { data } = await physesApi.getAll();
       setPhyses(data.items);
-    } catch { /* ignore */ }
+    } catch { setError(true); }
     finally { setLoading(false); setRefreshing(false); }
-  }
+  }, []);
+
+  useFocusEffect(useCallback(() => { load(); }, [load]));
 
   const filtered = physes.filter((p) => {
     const full = [p.lastName, p.firstName, p.middleName].filter(Boolean).join(' ');
@@ -51,6 +48,20 @@ export default function PhysesScreen() {
   if (loading) return (
     <View style={[s.center, { backgroundColor: t.bg }]}>
       <ActivityIndicator size="large" color={palette.orange} />
+    </View>
+  );
+
+  if (error) return (
+    <View style={[s.center, { backgroundColor: t.bg }]}>
+      <Ionicons name="cloud-offline-outline" size={48} color={t.placeholder} />
+      <Text style={[s.emptyTitle, { color: t.text, marginTop: 12 }]}>Не удалось загрузить</Text>
+      <Text style={[s.emptySub, { color: t.sub }]}>Проверьте подключение к интернету</Text>
+      <TouchableOpacity
+        style={[s.retryBtn, { backgroundColor: palette.orange }]}
+        onPress={() => load()}
+      >
+        <Text style={s.retryBtnText}>Повторить</Text>
+      </TouchableOpacity>
     </View>
   );
 
@@ -71,6 +82,15 @@ export default function PhysesScreen() {
             </TouchableOpacity>
           ) : null}
         </View>
+        {isAdmin && (
+          <TouchableOpacity
+            style={[s.addBtn, { backgroundColor: palette.orange }]}
+            onPress={() => router.push('/(tabs)/physes/create')}
+            activeOpacity={0.85}
+          >
+            <Ionicons name="add" size={24} color="#fff" />
+          </TouchableOpacity>
+        )}
       </View>
 
       {filtered.length > 0 && (
@@ -80,7 +100,7 @@ export default function PhysesScreen() {
       <FlatList
         data={filtered}
         keyExtractor={(item) => String(item.physId)}
-        contentContainerStyle={filtered.length === 0 ? s.emptyContainer : { paddingHorizontal: 16, paddingBottom: 24 }}
+        contentContainerStyle={filtered.length === 0 ? s.emptyContainer : { paddingHorizontal: 16, paddingBottom: TAB_BAR_CLEARANCE }}
         renderItem={({ item }) => <PhysCard item={item} t={t} />}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={() => load(true)} tintColor={palette.orange} />
@@ -100,15 +120,6 @@ export default function PhysesScreen() {
         }
       />
 
-      {isAdmin && (
-        <TouchableOpacity
-          style={s.fab}
-          onPress={() => router.push('/(tabs)/physes/create')}
-          activeOpacity={0.85}
-        >
-          <Ionicons name="add" size={28} color="#fff" />
-        </TouchableOpacity>
-      )}
     </View>
   );
 }
@@ -159,11 +170,12 @@ function PhysCard({ item, t }: { item: PhysResponse; t: ReturnType<typeof useThe
 const s = StyleSheet.create({
   flex: { flex: 1 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  searchWrap: { padding: 16, paddingBottom: 8 },
+  searchWrap: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 16, paddingBottom: 8 },
   searchBox: {
-    flexDirection: 'row', alignItems: 'center',
+    flex: 1, flexDirection: 'row', alignItems: 'center',
     borderWidth: 1.5, borderRadius: 14, paddingHorizontal: 12, gap: 8, height: 46,
   },
+  addBtn: { width: 46, height: 46, borderRadius: 14, justifyContent: 'center', alignItems: 'center' },
   searchInput: { flex: 1, fontSize: 15 },
   count: { fontSize: 13, fontWeight: '500', paddingHorizontal: 16, marginBottom: 8 },
 
@@ -188,12 +200,7 @@ const s = StyleSheet.create({
   emptyIcon: { width: 72, height: 72, borderRadius: 22, justifyContent: 'center', alignItems: 'center', marginBottom: 8 },
   emptyTitle: { fontSize: 18, fontWeight: '700' },
   emptySub: { fontSize: 14, textAlign: 'center' },
+  retryBtn: { paddingHorizontal: 24, paddingVertical: 12, borderRadius: 14, marginTop: 16 },
+  retryBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
 
-  fab: {
-    position: 'absolute', bottom: 24, right: 20,
-    width: 56, height: 56, borderRadius: 18,
-    backgroundColor: palette.orange,
-    justifyContent: 'center', alignItems: 'center',
-    shadowColor: palette.orange, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.4, shadowRadius: 12, elevation: 8,
-  },
 });

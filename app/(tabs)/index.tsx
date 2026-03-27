@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -11,9 +11,10 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import Svg, { Circle, G } from 'react-native-svg';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useTheme, palette } from '@/constants/design';
+import { useTheme, palette, TAB_BAR_CLEARANCE } from '@/constants/design';
+import { STATUSES } from '@/constants/activs';
+import { DonutChart } from '@/components/DonutChart';
 import { useAuth } from '@/store/auth-context';
 import { activsApi } from '@/api/activs';
 import { orgsApi } from '@/api/orgs';
@@ -32,12 +33,7 @@ export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [avatarUri, setAvatarUri] = useState<string | null>(null);
 
-  useEffect(() => {
-    load();
-    AsyncStorage.getItem('profile_avatar_uri').then(setAvatarUri);
-  }, []);
-
-  async function load(isRefresh = false) {
+  const load = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
     try {
       const [a, o, p] = await Promise.all([
@@ -64,7 +60,12 @@ export default function HomeScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }
+  }, []);
+
+  useEffect(() => {
+    load();
+    AsyncStorage.getItem('profile_avatar_uri').then(setAvatarUri);
+  }, [load]);
 
   const displayName =
     [user?.firstName, user?.lastName].filter(Boolean).join(' ') || user?.login || 'Пользователь';
@@ -96,7 +97,7 @@ export default function HomeScreen() {
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: t.bg }}
-      contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
+      contentContainerStyle={{ padding: 16, paddingBottom: TAB_BAR_CLEARANCE }}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load(true)} tintColor={palette.blue} />}
     >
 
@@ -128,7 +129,6 @@ export default function HomeScreen() {
           </View>
         )}
 
-        {/* Quick action */}
         <TouchableOpacity
           style={s.quickAction}
           onPress={() => router.push('/(tabs)/activs/create')}
@@ -196,8 +196,8 @@ export default function HomeScreen() {
             onPress={() => router.push(`/(tabs)/activs/${a.activId}`)}
             activeOpacity={0.8}
           >
-            <View style={[s.recentDot, { backgroundColor: `${statusColor(a.statusName)}20` }]}>
-              <Ionicons name="clipboard-outline" size={18} color={statusColor(a.statusName)} />
+            <View style={[s.recentDot, { backgroundColor: `${STATUSES.find((s) => s.statusName === a.statusName)?.color}20` }]}>
+              <Ionicons name="clipboard-outline" size={18} color={STATUSES.find((s) => s.statusName === a.statusName)?.color} />
             </View>
             <View style={s.recentInfo}>
               <Text style={[s.recentOrg, { color: t.text }]} numberOfLines={1}>{a.orgName}</Text>
@@ -206,8 +206,8 @@ export default function HomeScreen() {
                 {a.start ? `  ·  ${new Date(a.start).toLocaleDateString('ru-RU')}` : ''}
               </Text>
             </View>
-            <View style={[s.statusPill, { backgroundColor: `${statusColor(a.statusName)}15` }]}>
-              <Text style={[s.statusPillText, { color: statusColor(a.statusName) }]} numberOfLines={1}>
+            <View style={[s.statusPill, { backgroundColor: `${STATUSES.find((s) => s.statusName === a.statusName)?.color}15` }]}>
+              <Text style={[s.statusPillText, { color: STATUSES.find((s) => s.statusName === a.statusName)?.color }]} numberOfLines={1}>
                 {a.statusName}
               </Text>
             </View>
@@ -215,72 +215,6 @@ export default function HomeScreen() {
         ))
       )}
     </ScrollView>
-  );
-}
-
-const STATUS_CHART_ITEMS = [
-  { name: 'Запланирован', color: palette.blue },
-  { name: 'Открыт',       color: palette.orange },
-  { name: 'Сохранен',     color: palette.purple },
-  { name: 'Закрыт',       color: palette.green },
-];
-
-function statusColor(name: string | undefined): string {
-  return STATUS_CHART_ITEMS.find((s) => s.name === name)?.color ?? palette.blue;
-}
-
-const DONUT_SIZE = 140;
-const DONUT_STROKE = 20;
-const DONUT_R = (DONUT_SIZE - DONUT_STROKE) / 2;
-const DONUT_CIRC = 2 * Math.PI * DONUT_R;
-
-function DonutChart({ statusCounts }: { statusCounts: Record<string, number> }) {
-  const t = useTheme();
-  const total = Object.values(statusCounts).reduce((s, n) => s + n, 0);
-  if (total === 0) return null;
-
-  let offset = 0;
-  const segments = STATUS_CHART_ITEMS.map((item) => {
-    const count = statusCounts[item.name] ?? 0;
-    const dash = (count / total) * DONUT_CIRC;
-    const seg = { ...item, count, dash, offset };
-    offset += dash;
-    return seg;
-  }).filter((seg) => seg.count > 0);
-
-  return (
-    <View style={s.chartInner}>
-      <View>
-        <Svg width={DONUT_SIZE} height={DONUT_SIZE}>
-          <G transform={`rotate(-90, ${DONUT_SIZE / 2}, ${DONUT_SIZE / 2})`}>
-            {segments.map((seg) => (
-              <Circle
-                key={seg.name}
-                cx={DONUT_SIZE / 2} cy={DONUT_SIZE / 2} r={DONUT_R}
-                fill="none"
-                stroke={seg.color}
-                strokeWidth={DONUT_STROKE}
-                strokeDasharray={`${seg.dash} ${DONUT_CIRC}`}
-                strokeDashoffset={-seg.offset}
-              />
-            ))}
-          </G>
-        </Svg>
-        <View style={s.donutCenter} pointerEvents="none">
-          <Text style={[s.donutTotal, { color: t.text }]}>{total}</Text>
-          <Text style={[s.donutLabel, { color: t.sub }]}>всего</Text>
-        </View>
-      </View>
-      <View style={s.chartLegend}>
-        {segments.map((seg) => (
-          <View key={seg.name} style={s.legendRow}>
-            <View style={[s.legendDot, { backgroundColor: seg.color }]} />
-            <Text style={[s.legendName, { color: t.sub }]}>{seg.name}</Text>
-            <Text style={[s.legendCount, { color: seg.color }]}>{seg.count}</Text>
-          </View>
-        ))}
-      </View>
-    </View>
   );
 }
 
@@ -369,16 +303,4 @@ const s = StyleSheet.create({
     shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06, shadowRadius: 10, elevation: 3,
   },
-  chartInner: { flexDirection: 'row', alignItems: 'center', gap: 20 },
-  donutCenter: {
-    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-    justifyContent: 'center', alignItems: 'center',
-  },
-  donutTotal: { fontSize: 22, fontWeight: '800', color: '#000' },
-  donutLabel: { fontSize: 11, color: '#888', fontWeight: '500' },
-  chartLegend: { flex: 1, gap: 8 },
-  legendRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  legendDot: { width: 10, height: 10, borderRadius: 5 },
-  legendName: { flex: 1, fontSize: 13, fontWeight: '500', color: '#888' },
-  legendCount: { fontSize: 13, fontWeight: '700' },
 });

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   View, Text, ScrollView, StyleSheet,
   ActivityIndicator, Alert, Linking, TouchableOpacity,
@@ -6,15 +6,10 @@ import {
 import { useLocalSearchParams, useNavigation } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme, palette } from '@/constants/design';
+import { avatarColor } from '@/utils/avatarColor';
 import { physesApi } from '@/api/physes';
 import type { PhysResponse } from '@/api/types';
 
-const AVATAR_COLORS = ['#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#10b981', '#3b82f6'];
-function avatarColor(name: string) {
-  let h = 0;
-  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) % AVATAR_COLORS.length;
-  return AVATAR_COLORS[h];
-}
 
 export default function PhysDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -24,9 +19,7 @@ export default function PhysDetailScreen() {
   const [phys, setPhys] = useState<PhysResponse | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => { load(); }, [id]);
-
-  async function load() {
+  const load = useCallback(async () => {
     try {
       const { data } = await physesApi.getById(Number(id));
       setPhys(data);
@@ -34,7 +27,9 @@ export default function PhysDetailScreen() {
     } catch {
       Alert.alert('Ошибка', 'Не удалось загрузить данные врача');
     } finally { setLoading(false); }
-  }
+  }, [id, navigation]);
+
+  useEffect(() => { load(); }, [load]);
 
   if (loading) return (
     <View style={[s.center, { backgroundColor: t.bg }]}>
@@ -49,7 +44,6 @@ export default function PhysDetailScreen() {
 
   return (
     <ScrollView style={{ flex: 1, backgroundColor: t.bg }} contentContainerStyle={s.content}>
-      {/* Hero */}
       <View style={[s.hero, { backgroundColor: t.card }]}>
         <View style={[s.heroAvatar, { backgroundColor: `${color}20` }]}>
           <Text style={[s.heroAvatarText, { color }]}>{initials}</Text>
@@ -68,7 +62,6 @@ export default function PhysDetailScreen() {
         ) : null}
       </View>
 
-      {/* Contacts */}
       {(phys.phone || phys.email) && (
         <InfoCard t={t} icon="call-outline" title="Контакты">
           {phys.phone && (
@@ -93,7 +86,6 @@ export default function PhysDetailScreen() {
         </InfoCard>
       )}
 
-      {/* Organizations */}
       {phys.orgs.length > 0 && (
         <InfoCard t={t} icon="business-outline" title="Организации">
           <View style={s.orgsGrid}>
@@ -107,7 +99,6 @@ export default function PhysDetailScreen() {
         </InfoCard>
       )}
 
-      {/* Meta */}
       <InfoCard t={t} icon="information-circle-outline" title="Дополнительно">
         <Row label="ID врача" value={`#${phys.physId}`} t={t} />
       </InfoCard>

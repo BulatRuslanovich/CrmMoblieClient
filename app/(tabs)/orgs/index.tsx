@@ -5,17 +5,12 @@ import {
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useTheme, palette } from '@/constants/design';
+import { useTheme, palette, TAB_BAR_CLEARANCE } from '@/constants/design';
+import { avatarColor } from '@/utils/avatarColor';
 import { orgsApi } from '@/api/orgs';
 import type { OrgResponse } from '@/api/types';
 import { useAuth } from '@/store/auth-context';
 
-const TYPE_COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#8b5cf6', '#ef4444', '#06b6d4'];
-function typeColor(name: string) {
-  let h = 0;
-  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) % TYPE_COLORS.length;
-  return TYPE_COLORS[h];
-}
 
 export default function OrgsScreen() {
   const t = useTheme();
@@ -26,18 +21,20 @@ export default function OrgsScreen() {
   const [orgs, setOrgs] = useState<OrgResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState(false);
   const [search, setSearch] = useState('');
 
-  useFocusEffect(useCallback(() => { load(); }, []));
-
-  async function load(isRefresh = false) {
+  const load = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
+    else setError(false);
     try {
       const { data } = await orgsApi.getAll();
       setOrgs(data.items);
-    } catch { /* ignore */ }
+    } catch { setError(true); }
     finally { setLoading(false); setRefreshing(false); }
-  }
+  }, []);
+
+  useFocusEffect(useCallback(() => { load(); }, [load]));
 
   const filtered = orgs.filter(
     (o) =>
@@ -49,6 +46,20 @@ export default function OrgsScreen() {
   if (loading) return (
     <View style={[s.center, { backgroundColor: t.bg }]}>
       <ActivityIndicator size="large" color={palette.green} />
+    </View>
+  );
+
+  if (error) return (
+    <View style={[s.center, { backgroundColor: t.bg }]}>
+      <Ionicons name="cloud-offline-outline" size={48} color={t.placeholder} />
+      <Text style={[s.emptyTitle, { color: t.text, marginTop: 12 }]}>Не удалось загрузить</Text>
+      <Text style={[s.emptySub, { color: t.sub }]}>Проверьте подключение к интернету</Text>
+      <TouchableOpacity
+        style={[s.retryBtn, { backgroundColor: palette.green }]}
+        onPress={() => load()}
+      >
+        <Text style={s.retryBtnText}>Повторить</Text>
+      </TouchableOpacity>
     </View>
   );
 
@@ -69,6 +80,16 @@ export default function OrgsScreen() {
             </TouchableOpacity>
           ) : null}
         </View>
+        
+        {isAdmin && (
+          <TouchableOpacity
+            style={[s.addBtn, { backgroundColor: palette.green }]}
+            onPress={() => router.push('/(tabs)/orgs/create')}
+            activeOpacity={0.85}
+          >
+            <Ionicons name="add" size={24} color="#fff" />
+          </TouchableOpacity>
+        )}
       </View>
 
       {filtered.length > 0 && (
@@ -78,7 +99,7 @@ export default function OrgsScreen() {
       <FlatList
         data={filtered}
         keyExtractor={(item) => String(item.orgId)}
-        contentContainerStyle={filtered.length === 0 ? s.emptyContainer : { paddingHorizontal: 16, paddingBottom: 24 }}
+        contentContainerStyle={filtered.length === 0 ? s.emptyContainer : { paddingHorizontal: 16, paddingBottom: TAB_BAR_CLEARANCE }}
         renderItem={({ item }) => <OrgCard item={item} t={t} />}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={() => load(true)} tintColor={palette.green} />
@@ -98,22 +119,13 @@ export default function OrgsScreen() {
         }
       />
 
-      {isAdmin && (
-        <TouchableOpacity
-          style={s.fab}
-          onPress={() => router.push('/(tabs)/orgs/create')}
-          activeOpacity={0.85}
-        >
-          <Ionicons name="add" size={28} color="#fff" />
-        </TouchableOpacity>
-      )}
     </View>
   );
 }
 
 function OrgCard({ item, t }: { item: OrgResponse; t: ReturnType<typeof useTheme> }) {
   const router = useRouter();
-  const color = typeColor(item.orgTypeName);
+  const color = avatarColor(item.orgTypeName);
   const initials = item.orgName.split(' ').slice(0, 2).map((w) => w[0]).join('').toUpperCase();
 
   return (
@@ -147,9 +159,10 @@ function OrgCard({ item, t }: { item: OrgResponse; t: ReturnType<typeof useTheme
 const s = StyleSheet.create({
   flex: { flex: 1 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  searchWrap: { padding: 16, paddingBottom: 8 },
+  searchWrap: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 16, paddingBottom: 8 },
+  addBtn: { width: 46, height: 46, borderRadius: 14, justifyContent: 'center', alignItems: 'center' },
   searchBox: {
-    flexDirection: 'row', alignItems: 'center',
+    flex: 1, flexDirection: 'row', alignItems: 'center',
     borderWidth: 1.5, borderRadius: 14, paddingHorizontal: 12, gap: 8, height: 46,
   },
   searchInput: { flex: 1, fontSize: 15 },
@@ -175,12 +188,7 @@ const s = StyleSheet.create({
   emptyIcon: { width: 72, height: 72, borderRadius: 22, justifyContent: 'center', alignItems: 'center', marginBottom: 8 },
   emptyTitle: { fontSize: 18, fontWeight: '700' },
   emptySub: { fontSize: 14, textAlign: 'center' },
+  retryBtn: { paddingHorizontal: 24, paddingVertical: 12, borderRadius: 14, marginTop: 16 },
+  retryBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
 
-  fab: {
-    position: 'absolute', bottom: 24, right: 20,
-    width: 56, height: 56, borderRadius: 18,
-    backgroundColor: palette.green,
-    justifyContent: 'center', alignItems: 'center',
-    shadowColor: palette.green, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.4, shadowRadius: 12, elevation: 8,
-  },
 });

@@ -88,13 +88,11 @@ export default function RegisterScreen() {
       style={[s.flex, { backgroundColor: t.bg }]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      {/* Фоновые декоративные круги */}
       <View style={[s.bgCircle1, { backgroundColor: `${palette.blue}10` }]} />
       <View style={[s.bgCircle2, { backgroundColor: `${palette.blue}07` }]} />
 
       <ScrollView contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled">
 
-        {/* Header */}
         <View style={s.header}>
           <TouchableOpacity
             style={[s.backBtn, { backgroundColor: t.card }]}
@@ -108,7 +106,6 @@ export default function RegisterScreen() {
           </View>
         </View>
 
-        {/* Card */}
         <View style={[s.card, { backgroundColor: t.card }]}>
           {FIELDS.map(({ key, label, placeholder, icon, secure, keyboard, required }) => (
             <View key={key} style={s.fieldWrap}>

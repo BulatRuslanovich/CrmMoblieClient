@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   View, Text, ScrollView, StyleSheet,
   ActivityIndicator, Alert, Linking, TouchableOpacity,
@@ -17,9 +17,7 @@ export default function OrgDetailScreen() {
   const [org, setOrg] = useState<OrgResponse | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => { load(); }, [id]);
-
-  async function load() {
+  const load = useCallback(async () => {
     try {
       const { data } = await orgsApi.getById(Number(id));
       setOrg(data);
@@ -27,7 +25,9 @@ export default function OrgDetailScreen() {
     } catch {
       Alert.alert('Ошибка', 'Не удалось загрузить организацию');
     } finally { setLoading(false); }
-  }
+  }, [id, navigation]);
+
+  useEffect(() => { load(); }, [load]);
 
   if (loading) return (
     <View style={[s.center, { backgroundColor: t.bg }]}>
@@ -40,7 +40,6 @@ export default function OrgDetailScreen() {
 
   return (
     <ScrollView style={{ flex: 1, backgroundColor: t.bg }} contentContainerStyle={s.content}>
-      {/* Hero */}
       <View style={[s.hero, { backgroundColor: t.card }]}>
         <View style={[s.heroAvatar, { backgroundColor: `${palette.green}18` }]}>
           <Text style={[s.heroAvatarText, { color: palette.green }]}>{initials}</Text>
@@ -52,14 +51,12 @@ export default function OrgDetailScreen() {
         </View>
       </View>
 
-      {/* Requisites */}
       {org.inn && (
         <InfoCard t={t} icon="document-outline" title="Реквизиты">
           <Row label="ИНН" value={org.inn} t={t} last />
         </InfoCard>
       )}
 
-      {/* Address */}
       {(org.address || org.latitude) && (
         <InfoCard t={t} icon="location-outline" title="Местоположение">
           {org.address && (
@@ -85,7 +82,6 @@ export default function OrgDetailScreen() {
         </InfoCard>
       )}
 
-      {/* Metadata */}
       <InfoCard t={t} icon="information-circle-outline" title="Дополнительно">
         <Row label="ID организации" value={`#${org.orgId}`} t={t} />
       </InfoCard>

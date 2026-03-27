@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   View, Text, ScrollView, StyleSheet,
   ActivityIndicator, Alert, TouchableOpacity,
@@ -6,11 +6,11 @@ import {
 import { useLocalSearchParams, useRouter, useNavigation } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme, palette } from '@/constants/design';
+import { STATUSES } from '@/constants/activs';
 import { activsApi } from '@/api/activs';
 import type { ActivResponse } from '@/api/types';
 import { useAuth } from '@/store/auth-context';
 
-const STATUS_ID = { planned: 1, open: 2, saved: 3, closed: 4 } as const;
 
 function fmtDate(d: string | null) {
   if (!d) return '—';
@@ -34,48 +34,7 @@ export default function ActivDetailScreen() {
   const [deleting, setDeleting] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
 
-  useEffect(() => { load(); }, [id]);
-
-  async function handleOpenVisit() {
-    if (!activ) return;
-    setActionLoading(true);
-    try {
-      await activsApi.update(numId, {
-        statusId: STATUS_ID.open, start: new Date().toISOString(),
-        end: activ.end, description: activ.description, result: activ.result,
-      });
-      await load();
-    } catch { Alert.alert('Ошибка', 'Не удалось открыть визит'); }
-    finally { setActionLoading(false); }
-  }
-
-  async function handleSaveVisit() {
-    if (!activ) return;
-    setActionLoading(true);
-    try {
-      await activsApi.update(numId, {
-        statusId: STATUS_ID.saved, start: activ.start,
-        end: activ.end, description: activ.description, result: activ.result,
-      });
-      await load();
-    } catch { Alert.alert('Ошибка', 'Не удалось сохранить визит'); }
-    finally { setActionLoading(false); }
-  }
-
-  async function handleCloseVisit() {
-    if (!activ) return;
-    setActionLoading(true);
-    try {
-      await activsApi.update(numId, {
-        statusId: STATUS_ID.closed, start: activ.start,
-        end: new Date().toISOString(), description: activ.description, result: activ.result,
-      });
-      await load();
-    } catch { Alert.alert('Ошибка', 'Не удалось закрыть визит'); }
-    finally { setActionLoading(false); }
-  }
-
-  async function load() {
+  const load = useCallback(async () => {
     if (isNaN(numId)) {
       router.back();
       return;
@@ -99,6 +58,47 @@ export default function ActivDetailScreen() {
       Alert.alert('Ошибка', 'Не удалось загрузить визит');
       router.back();
     } finally { setLoading(false); }
+  }, [numId, id, navigation, router]);
+
+  useEffect(() => { load(); }, [load]);
+
+  async function handleOpenVisit() {
+    if (!activ) return;
+    setActionLoading(true);
+    try {
+      await activsApi.update(numId, {
+        statusId: STATUSES[1].statusId, start: new Date().toISOString(),
+        end: activ.end, description: activ.description, result: activ.result,
+      });
+      await load();
+    } catch { Alert.alert('Ошибка', 'Не удалось открыть визит'); }
+    finally { setActionLoading(false); }
+  }
+
+  async function handleSaveVisit() {
+    if (!activ) return;
+    setActionLoading(true);
+    try {
+      await activsApi.update(numId, {
+        statusId: STATUSES[2].statusId, start: activ.start,
+        end: activ.end, description: activ.description, result: activ.result,
+      });
+      await load();
+    } catch { Alert.alert('Ошибка', 'Не удалось сохранить визит'); }
+    finally { setActionLoading(false); }
+  }
+
+  async function handleCloseVisit() {
+    if (!activ) return;
+    setActionLoading(true);
+    try {
+      await activsApi.update(numId, {
+        statusId: STATUSES[3].statusId, start: activ.start,
+        end: new Date().toISOString(), description: activ.description, result: activ.result,
+      });
+      await load();
+    } catch { Alert.alert('Ошибка', 'Не удалось закрыть визит'); }
+    finally { setActionLoading(false); }
   }
 
   async function handleDelete() {
@@ -125,7 +125,6 @@ export default function ActivDetailScreen() {
 
   return (
     <ScrollView style={{ flex: 1, backgroundColor: t.bg }} contentContainerStyle={s.content}>
-      {/* Header card */}
       <View style={[s.heroCard, { backgroundColor: palette.blue }]}>
         <View style={s.heroIcon}>
           <Ionicons name="business" size={28} color={palette.blue} />
@@ -137,14 +136,12 @@ export default function ActivDetailScreen() {
         <Text style={s.heroUser}>@{activ.usrLogin}</Text>
       </View>
 
-      {/* Time block */}
       <InfoCard t={t}>
         <CardHeader icon="time-outline" title="Время визита" t={t} />
         <Row label="Начало" value={fmtDate(activ.start)} t={t} />
         <Row label="Конец" value={fmtDate(activ.end)} t={t} last />
       </InfoCard>
 
-      {/* Description */}
       {activ.description ? (
         <InfoCard t={t}>
           <CardHeader icon="document-text-outline" title="Описание" t={t} />
@@ -152,7 +149,6 @@ export default function ActivDetailScreen() {
         </InfoCard>
       ) : null}
 
-      {/* Result */}
       {activ.result ? (
         <InfoCard t={t}>
           <CardHeader icon="checkmark-circle-outline" title="Результат" t={t} />
@@ -160,7 +156,6 @@ export default function ActivDetailScreen() {
         </InfoCard>
       ) : null}
 
-      {/* Drugs */}
       {activ.drugs.length > 0 ? (
         <InfoCard t={t}>
           <CardHeader icon="medkit-outline" title="Препараты" t={t} />
@@ -175,13 +170,11 @@ export default function ActivDetailScreen() {
         </InfoCard>
       ) : null}
 
-      {/* Metadata */}
       <InfoCard t={t}>
         <CardHeader icon="information-circle-outline" title="Информация" t={t} />
         <Row label="ID визита" value={`#${activ.activId}`} t={t} />
       </InfoCard>
 
-      {/* Action buttons */}
       {activ.statusName === 'Запланирован' && (
         <TouchableOpacity
           style={[s.actionBtn, { backgroundColor: palette.orange }, actionLoading && s.disabled]}
@@ -229,7 +222,6 @@ export default function ActivDetailScreen() {
         </View>
       )}
 
-      {/* Delete — только для админа */}
       {isAdmin && <TouchableOpacity
         style={[s.deleteBtn, deleting && s.disabled]}
         onPress={handleDelete}

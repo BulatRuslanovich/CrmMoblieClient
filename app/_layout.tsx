@@ -27,7 +27,7 @@ function RootLayoutNav() {
     } else if (isAuthenticated && user && inAuthGroup) {
       router.replace('/(tabs)');
     }
-  }, [isAuthenticated, isLoading, segments]);
+  }, [isAuthenticated, isLoading, router, segments, user]);
 
   if (isLoading) return null;
 

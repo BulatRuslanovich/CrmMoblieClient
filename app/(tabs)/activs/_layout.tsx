@@ -1,17 +1,11 @@
 import { Stack } from 'expo-router';
-import { useTheme } from '@/constants/design';
+import { useStackScreenOptions } from '@/constants/design';
 
 export default function ActivsLayout() {
-  const t = useTheme();
+  const screenOptions = useStackScreenOptions();
 
   return (
-    <Stack
-      screenOptions={{
-        headerStyle: { backgroundColor: t.bg },
-        headerShadowVisible: false,
-        headerTintColor: t.text,
-        headerTitleStyle: { fontWeight: '700', fontSize: 18 },
-      }}
+    <Stack screenOptions={screenOptions}
     >
       <Stack.Screen name="index" options={{ title: 'Визиты' }} />
       <Stack.Screen name="[id]" options={{ title: 'Детали визита' }} />

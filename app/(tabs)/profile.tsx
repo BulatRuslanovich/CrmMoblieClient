@@ -6,7 +6,7 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
-import { useTheme, palette } from '@/constants/design';
+import { useTheme, palette, TAB_BAR_CLEARANCE } from '@/constants/design';
 import { useAuth } from '@/store/auth-context';
 import { usersApi } from '@/api/users';
 import { activsApi } from '@/api/activs';
@@ -148,7 +148,6 @@ export default function ProfileScreen() {
         ) : null}
       </View>
 
-      {/* ── Stats strip (overlaps hero) ── */}
       <View style={[s.statsStrip, { backgroundColor: t.card }]}>
         <StatItem label="ID" value={`#${user?.usrId ?? '—'}`} t={t} />
         <View style={[s.stripDiv, { backgroundColor: t.border }]} />
@@ -157,7 +156,6 @@ export default function ProfileScreen() {
         <StatItem label="Ролей" value={String(user?.policies?.length ?? 0)} t={t} />
       </View>
 
-      {/* ── Personal info ── */}
       <SectionCard t={t}>
         <SectionHeader
           icon="person-outline" title="Личные данные" iconColor={palette.blue}
@@ -221,7 +219,6 @@ export default function ProfileScreen() {
         )}
       </SectionCard>
 
-      {/* ── Password ── */}
       <SectionCard t={t}>
         <TouchableOpacity style={s.sectionToggle} onPress={() => setShowPwd((v) => !v)} activeOpacity={0.7}>
           <View style={[s.sectionIconWrap, { backgroundColor: `${palette.purple}15` }]}>
@@ -266,7 +263,6 @@ export default function ProfileScreen() {
         )}
       </SectionCard>
 
-      {/* ── Logout ── */}
       <TouchableOpacity
         style={[s.logoutBtn, { backgroundColor: t.card, borderColor: `${palette.red}30` }, loggingOut && s.disabled]}
         onPress={handleLogout} disabled={loggingOut} activeOpacity={0.8}
@@ -285,8 +281,6 @@ export default function ProfileScreen() {
     </ScrollView>
   );
 }
-
-// ── Sub-components ──────────────────────────────────────────
 
 function SectionCard({ t, children }: { t: ReturnType<typeof useTheme>; children: React.ReactNode }) {
   return <View style={[s.card, { backgroundColor: t.card }]}>{children}</View>;
@@ -337,10 +331,8 @@ function StatItem({ label, value, t }: { label: string; value: string; t: Return
   );
 }
 
-// ── Styles ──────────────────────────────────────────────────
-
 const s = StyleSheet.create({
-  content: { paddingBottom: 40 },
+  content: { paddingBottom: TAB_BAR_CLEARANCE },
 
   hero: { paddingTop: 36, paddingBottom: 40, alignItems: 'center', gap: 6, overflow: 'hidden' },
   heroCircle1: {

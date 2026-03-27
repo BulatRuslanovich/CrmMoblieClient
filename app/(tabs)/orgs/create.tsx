@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   ScrollView, ActivityIndicator, Alert,
@@ -6,6 +6,8 @@ import {
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme, palette } from '@/constants/design';
+import { FieldBlock } from '@/components/FieldBlock';
+import { Selector, PickerList } from '@/components/Selector';
 import { orgsApi } from '@/api/orgs';
 import { orgTypesApi } from '@/api/org-types';
 import type { OrgTypeResponse } from '@/api/types';
@@ -28,9 +30,7 @@ export default function CreateOrgScreen() {
   const [loadingData, setLoadingData] = useState(true);
   const [openTypePicker, setOpenTypePicker] = useState(false);
 
-  useEffect(() => { loadRefs(); }, []);
-
-  async function loadRefs() {
+  const loadRefs = useCallback(async () => {
     try {
       const { data } = await orgTypesApi.getAll();
       setOrgTypes(data);
@@ -39,7 +39,9 @@ export default function CreateOrgScreen() {
     } finally {
       setLoadingData(false);
     }
-  }
+  }, []);
+
+  useEffect(() => { loadRefs(); }, [loadRefs]);
 
   function validate() {
     const e: Record<string, string> = {};
@@ -86,43 +88,25 @@ export default function CreateOrgScreen() {
       contentContainerStyle={s.content}
       keyboardShouldPersistTaps="handled"
     >
-      {/* Тип организации */}
       <FieldBlock label="Тип организации" required error={errors.orgTypeId} t={t}>
-        <TouchableOpacity
-          style={[s.selector, { backgroundColor: t.inputBg, borderColor: errors.orgTypeId ? palette.red : t.border }]}
-          onPress={() => setOpenTypePicker((v) => !v)}
-          activeOpacity={0.8}
-        >
-          <Ionicons name="briefcase-outline" size={18} color={selectedType ? palette.green : t.placeholder} />
-          <Text style={[s.selectorText, { color: selectedType ? t.text : t.placeholder }]} numberOfLines={1}>
-            {selectedType?.orgTypeName ?? 'Выберите тип'}
-          </Text>
-          <Ionicons name={openTypePicker ? 'chevron-up' : 'chevron-down'} size={16} color={t.placeholder} />
-        </TouchableOpacity>
+        <Selector
+          value={selectedType?.orgTypeName ?? null}
+          placeholder="Выберите тип"
+          icon="briefcase-outline"
+          open={openTypePicker}
+          onToggle={() => setOpenTypePicker((v) => !v)}
+          t={t} error={!!errors.orgTypeId}
+        />
         {openTypePicker && (
-          <View style={[s.pickerList, { backgroundColor: t.card, borderColor: t.border }]}>
-            {orgTypes.map((item, idx) => (
-              <TouchableOpacity
-                key={item.orgTypeId}
-                style={[
-                  s.pickerItem,
-                  { borderBottomColor: t.border },
-                  idx < orgTypes.length - 1 && { borderBottomWidth: 1 },
-                  orgTypeId === item.orgTypeId && { backgroundColor: `${palette.green}10` },
-                ]}
-                onPress={() => { setOrgTypeId(item.orgTypeId); setOpenTypePicker(false); }}
-              >
-                <Text style={[s.pickerItemLabel, { color: t.text }]}>{item.orgTypeName}</Text>
-                {orgTypeId === item.orgTypeId && (
-                  <Ionicons name="checkmark-circle" size={18} color={palette.green} />
-                )}
-              </TouchableOpacity>
-            ))}
-          </View>
+          <PickerList
+            items={orgTypes.map((o) => ({ id: o.orgTypeId, label: o.orgTypeName }))}
+            selectedId={orgTypeId}
+            onSelect={(id) => { setOrgTypeId(id); setOpenTypePicker(false); }}
+            t={t} accentColor={palette.green}
+          />
         )}
       </FieldBlock>
 
-      {/* Название */}
       <FieldBlock label="Название" required error={errors.orgName} t={t}>
         <View style={[s.inputWrap, { backgroundColor: t.inputBg, borderColor: errors.orgName ? palette.red : t.border }]}>
           <Ionicons name="business-outline" size={16} color={t.placeholder} />
@@ -135,7 +119,6 @@ export default function CreateOrgScreen() {
         </View>
       </FieldBlock>
 
-      {/* ИНН */}
       <FieldBlock label="ИНН" error={errors.inn} t={t}>
         <View style={[s.inputWrap, { backgroundColor: t.inputBg, borderColor: errors.inn ? palette.red : t.border }]}>
           <Ionicons name="card-outline" size={16} color={t.placeholder} />
@@ -149,7 +132,6 @@ export default function CreateOrgScreen() {
         </View>
       </FieldBlock>
 
-      {/* Адрес */}
       <FieldBlock label="Адрес" t={t}>
         <View style={[s.inputWrap, { backgroundColor: t.inputBg, borderColor: t.border }]}>
           <Ionicons name="location-outline" size={16} color={t.placeholder} />
@@ -162,7 +144,6 @@ export default function CreateOrgScreen() {
         </View>
       </FieldBlock>
 
-      {/* Координаты */}
       <View style={s.row}>
         <View style={s.half}>
           <FieldBlock label="Широта" error={errors.latitude} t={t}>
@@ -194,7 +175,6 @@ export default function CreateOrgScreen() {
         </View>
       </View>
 
-      {/* Submit */}
       <TouchableOpacity
         style={[s.submitBtn, submitting && s.disabled]}
         onPress={handleSubmit}
@@ -212,46 +192,9 @@ export default function CreateOrgScreen() {
   );
 }
 
-function FieldBlock({
-  label, required, error, t, children,
-}: {
-  label: string; required?: boolean; error?: string;
-  t: ReturnType<typeof useTheme>; children: React.ReactNode;
-}) {
-  return (
-    <View style={s.fieldBlock}>
-      <View style={s.labelRow}>
-        <Text style={[s.label, { color: t.sub }]}>{label}</Text>
-        {required && <Text style={s.required}>*</Text>}
-      </View>
-      {children}
-      {error ? <Text style={s.error}>{error}</Text> : null}
-    </View>
-  );
-}
-
 const s = StyleSheet.create({
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   content: { padding: 16, gap: 4, paddingBottom: 40 },
-
-  fieldBlock: { marginBottom: 12 },
-  labelRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 8 },
-  label: { fontSize: 13, fontWeight: '600', letterSpacing: 0.2 },
-  required: { color: palette.red, fontWeight: '700', fontSize: 13 },
-  error: { color: palette.red, fontSize: 12, marginTop: 4, marginLeft: 2 },
-
-  selector: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
-    borderWidth: 1.5, borderRadius: 14, paddingHorizontal: 14, height: 50,
-  },
-  selectorText: { flex: 1, fontSize: 15 },
-
-  pickerList: {
-    borderWidth: 1.5, borderRadius: 14, marginTop: 6,
-    maxHeight: 220, overflow: 'hidden',
-  },
-  pickerItem: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 12 },
-  pickerItemLabel: { flex: 1, fontSize: 15, fontWeight: '500' },
 
   inputWrap: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
