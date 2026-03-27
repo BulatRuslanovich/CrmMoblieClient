@@ -9,7 +9,8 @@ interface AuthContextValue {
   isLoading: boolean;
   user: UserResponse | null;
   login: (login: string, password: string) => Promise<void>;
-  register: (data: RegisterRequest) => Promise<void>;
+  register: (data: RegisterRequest) => Promise<{ email: string }>;
+  confirmEmail: (email: string, code: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
 }
@@ -51,8 +52,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(me);
   }
 
-  async function register(registerData: RegisterRequest) {
+  async function register(registerData: RegisterRequest): Promise<{ email: string }> {
     const { data } = await authApi.register(registerData);
+    return { email: data.email };
+  }
+
+  async function confirmEmail(email: string, code: string) {
+    const { data } = await authApi.confirmEmail(email, code);
     await AsyncStorage.setItem('accessToken', data.accessToken);
     await AsyncStorage.setItem('refreshToken', data.refreshToken);
     setUser(data.user);
@@ -83,7 +89,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ isAuthenticated, isLoading, user, login, register, logout, refreshUser }}
+      value={{ isAuthenticated, isLoading, user, login, register, confirmEmail, logout, refreshUser }}
     >
       {children}
     </AuthContext.Provider>

@@ -38,7 +38,14 @@ export default function LoginScreen() {
       router.replace('/');
     } catch (err: any) {
       const status = err?.response?.status;
-      if (status === 401 || status === 403) {
+      if (status === 403) {
+        const email = err?.response?.data?.email;
+        if (email) {
+          router.push({ pathname: '/(auth)/verify-email', params: { email } });
+          return;
+        }
+        setApiError('Неверный логин или пароль');
+      } else if (status === 401) {
         setApiError('Неверный логин или пароль');
       } else if (err?.request && !err?.response) {
         setApiError('Сервер недоступен. Проверьте подключение.');
@@ -112,6 +119,13 @@ export default function LoginScreen() {
             </View>
             {errors.password ? <Text style={s.error}>{errors.password}</Text> : null}
           </View>
+
+          <TouchableOpacity
+            style={s.forgotBtn}
+            onPress={() => router.push('/(auth)/forgot-password')}
+          >
+            <Text style={[s.forgotText, { color: palette.blue }]}>Забыли пароль?</Text>
+          </TouchableOpacity>
 
           {apiError ? (
             <View style={[s.apiErrorWrap, { backgroundColor: `${palette.red}10`, borderColor: `${palette.red}30` }]}>
@@ -197,6 +211,9 @@ const s = StyleSheet.create({
   },
   input: { flex: 1, fontSize: 15 },
   error: { color: palette.red, fontSize: 12, marginTop: 4, marginLeft: 2 },
+
+  forgotBtn: { alignSelf: 'flex-end', marginTop: 4, marginBottom: 8 },
+  forgotText: { fontSize: 13, fontWeight: '600' },
 
   btn: {
     flexDirection: 'row', backgroundColor: palette.blue, borderRadius: 14,

@@ -19,10 +19,10 @@ const FIELDS: {
   keyboard?: 'default' | 'email-address' | 'phone-pad';
   required?: boolean;
 }[] = [
-  { key: 'lastName',        label: 'Фамилия',            placeholder: 'Иванов',           icon: 'person-outline' },
-  { key: 'firstName',       label: 'Имя',                placeholder: 'Иван',             icon: 'person-outline' },
-  { key: 'email',           label: 'Email',              placeholder: 'user@example.com', icon: 'mail-outline',        keyboard: 'email-address' },
-  { key: 'phone',           label: 'Телефон',            placeholder: '+7 900 000 00 00', icon: 'call-outline',        keyboard: 'phone-pad' },
+  { key: 'lastName',        label: 'Фамилия',            placeholder: 'Иванов',           icon: 'person-outline',      required: true },
+  { key: 'firstName',       label: 'Имя',                placeholder: 'Иван',             icon: 'person-outline',      required: true },
+  { key: 'email',           label: 'Email',              placeholder: 'user@example.com', icon: 'mail-outline',        keyboard: 'email-address',   required: true },
+  { key: 'phone',           label: 'Телефон',            placeholder: '+7 900 000 00 00', icon: 'call-outline',        keyboard: 'phone-pad',       required: true },
   { key: 'login',           label: 'Логин',              placeholder: 'user123',          icon: 'at-outline',          required: true },
   { key: 'password',        label: 'Пароль',             placeholder: '••••••',           icon: 'lock-closed-outline', secure: true, required: true },
   { key: 'confirmPassword', label: 'Подтвердите пароль', placeholder: '••••••',           icon: 'lock-closed-outline', secure: true, required: true },
@@ -44,6 +44,10 @@ export default function RegisterScreen() {
 
   function validate(): boolean {
     const e: typeof errors = {};
+    if (!form.firstName.trim()) e.firstName = 'Обязательное поле';
+    if (!form.lastName.trim()) e.lastName = 'Обязательное поле';
+    if (!form.email.trim()) e.email = 'Обязательное поле';
+    if (!form.phone.trim()) e.phone = 'Обязательное поле';
     if (!form.login.trim()) e.login = 'Обязательное поле';
     if (!form.password) e.password = 'Обязательное поле';
     else if (form.password.length < 6) e.password = 'Минимум 6 символов';
@@ -59,19 +63,19 @@ export default function RegisterScreen() {
     setApiError(null);
     setLoading(true);
     try {
-      await register({
+      const { email } = await register({
         login: form.login.trim(),
         password: form.password,
-        firstName: form.firstName || null,
-        lastName: form.lastName || null,
-        email: form.email || null,
-        phone: form.phone || null,
+        firstName: form.firstName.trim(),
+        lastName: form.lastName.trim(),
+        email: form.email.trim(),
+        phone: form.phone.trim(),
       });
-      router.replace('/');
+      router.replace({ pathname: '/(auth)/verify-email', params: { email } });
     } catch (err: any) {
       const status = err?.response?.status;
       if (status === 409) {
-        setApiError('Пользователь с таким логином или email уже существует');
+        setApiError(err?.response?.data?.error || 'Пользователь с такими данными уже существует');
       } else if (err?.request && !err?.response) {
         setApiError('Сервер недоступен. Проверьте подключение.');
       } else {
