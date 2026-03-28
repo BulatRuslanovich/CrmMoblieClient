@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   View, Text, ScrollView, StyleSheet,
-  ActivityIndicator, Alert, Linking, TouchableOpacity,
+  ActivityIndicator, Alert, Linking, TouchableOpacity, Platform,
 } from 'react-native';
 import { useLocalSearchParams, useNavigation } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -67,7 +67,14 @@ export default function OrgDetailScreen() {
           {org.latitude && org.longitude && (
             <TouchableOpacity
               style={[s.mapBtn, { backgroundColor: `${palette.blue}12` }]}
-              onPress={() => Linking.openURL(`https://maps.google.com/?q=${org.latitude},${org.longitude}`)}
+              onPress={() => {
+                const lat = org.latitude;
+                const lon = org.longitude;
+                const url = Platform.OS === 'ios'
+                  ? `https://maps.apple.com/?ll=${lat},${lon}`
+                  : `geo:${lat},${lon}?q=${lat},${lon}`;
+                Linking.openURL(url);
+              }}
               activeOpacity={0.8}
             >
               <Ionicons name="navigate-outline" size={16} color={palette.blue} />
