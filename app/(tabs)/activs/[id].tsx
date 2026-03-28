@@ -272,7 +272,7 @@ function Row({ label, value, t, last }: {
 
 const s = StyleSheet.create({
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  content: { padding: 16, gap: 12, paddingBottom: 32 },
+  content: { padding: 16, gap: 12, paddingBottom: 100 },
 
   heroCard: { borderRadius: 22, padding: 24, alignItems: 'center', gap: 8 },
   heroIcon: {

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity,
-  StyleSheet, ActivityIndicator, RefreshControl, TextInput,
+  StyleSheet, ActivityIndicator, RefreshControl, TextInput, ScrollView,
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -39,6 +39,8 @@ export default function ActivsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [selectedStatuses, setSelectedStatuses] = useState<Set<string>>(new Set());
+  const [showFilters, setShowFilters] = useState(false);
   const [error, setError] = useState(false);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -62,11 +64,21 @@ export default function ActivsScreen() {
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
-  const filtered = activs.filter(
-    (a) =>
+  function toggleStatus(name: string) {
+    setSelectedStatuses((prev) => {
+      const next = new Set(prev);
+      next.has(name) ? next.delete(name) : next.add(name);
+      return next;
+    });
+  }
+
+  const filtered = activs.filter((a) => {
+    const matchSearch =
       a.orgName.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
-      a.statusName.toLowerCase().includes(debouncedSearch.toLowerCase())
-  );
+      a.statusName.toLowerCase().includes(debouncedSearch.toLowerCase());
+    const matchStatus = selectedStatuses.size === 0 || selectedStatuses.has(a.statusName);
+    return matchSearch && matchStatus;
+  });
 
   const sorted = [...filtered].sort((a, b) => {
     if (!a.start && !b.start) return b.activId - a.activId;
@@ -126,13 +138,62 @@ export default function ActivsScreen() {
           ) : null}
         </View>
         <TouchableOpacity
-          style={[s.addBtn, { backgroundColor: palette.blue }]}
+          style={[s.iconBtn, { backgroundColor: t.card, borderColor: t.border }, showFilters && { backgroundColor: `${palette.blue}15`, borderColor: palette.blue }]}
+          onPress={() => setShowFilters((v) => !v)}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="options-outline" size={20} color={showFilters ? palette.blue : t.sub} />
+          {selectedStatuses.size > 0 && (
+            <View style={[s.filterBadge, { backgroundColor: palette.blue }]}>
+              <Text style={s.filterBadgeText}>{selectedStatuses.size}</Text>
+            </View>
+          )}
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[s.iconBtn, { backgroundColor: palette.blue }]}
           onPress={() => router.push('/(tabs)/activs/create')}
           activeOpacity={0.85}
         >
           <Ionicons name="add" size={22} color="#fff" />
         </TouchableOpacity>
+        
       </View>
+
+      {showFilters && (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={s.filtersScroll}
+          contentContainerStyle={s.filtersRow}
+        >
+          {STATUSES.map((st) => {
+            const active = selectedStatuses.has(st.statusName);
+            return (
+              <TouchableOpacity
+                key={st.statusName}
+                style={[s.chip, { borderColor: `${st.color}50` }, active && { backgroundColor: st.color, borderColor: st.color }]}
+                onPress={() => toggleStatus(st.statusName)}
+                activeOpacity={0.75}
+              >
+                <View style={[s.chipCheck, { borderColor: active ? '#fff' : st.color }, active && { backgroundColor: '#fff' }]}>
+                  <Ionicons name="checkmark" size={9} color={active ? st.color : 'transparent'} />
+                </View>
+                <Text style={[s.chipText, { color: active ? '#fff' : st.color }]}>{st.statusName}</Text>
+              </TouchableOpacity>
+            );
+          })}
+          {selectedStatuses.size > 0 && (
+            <TouchableOpacity
+              style={[s.chip, { borderColor: t.border }]}
+              onPress={() => setSelectedStatuses(new Set())}
+              activeOpacity={0.75}
+            >
+              <Ionicons name="close" size={13} color={t.sub} />
+              <Text style={[s.chipText, { color: t.sub }]}>Сбросить</Text>
+            </TouchableOpacity>
+          )}
+        </ScrollView>
+      )}
 
       {filtered.length > 0 && (
         <Text style={[s.count, { color: t.sub }]}>
@@ -158,12 +219,12 @@ export default function ActivsScreen() {
               <Ionicons name="clipboard-outline" size={36} color={palette.blue} />
             </View>
             <Text style={[s.emptyTitle, { color: t.text }]}>
-              {search ? 'Ничего не найдено' : 'Нет визитов'}
+              {search || selectedStatuses.size > 0 ? 'Ничего не найдено' : 'Нет визитов'}
             </Text>
             <Text style={[s.emptySub, { color: t.sub }]}>
-              {search ? 'Попробуйте изменить запрос' : 'Создайте первый визит'}
+              {search || selectedStatuses.size > 0 ? 'Попробуйте изменить запрос или фильтр' : 'Создайте первый визит'}
             </Text>
-            {!search && (
+            {!search && selectedStatuses.size === 0 && (
               <TouchableOpacity
                 style={[s.emptyBtn, { backgroundColor: palette.blue }]}
                 onPress={() => router.push('/(tabs)/activs/create')}
@@ -239,9 +300,17 @@ const s = StyleSheet.create({
     borderWidth: 1.5, borderRadius: 14, paddingHorizontal: 12, gap: 8, height: 46,
   },
   searchInput: { flex: 1, fontSize: 15 },
-  addBtn: { width: 46, height: 46, borderRadius: 14, justifyContent: 'center', alignItems: 'center',
-    shadowColor: palette.blue, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 8, elevation: 5,
+  iconBtn: {
+    width: 46, height: 46, borderRadius: 14,
+    justifyContent: 'center', alignItems: 'center',
+
   },
+  filterBadge: {
+    position: 'absolute', top: 6, right: 6,
+    width: 16, height: 16, borderRadius: 8,
+    justifyContent: 'center', alignItems: 'center',
+  },
+  filterBadgeText: { color: '#fff', fontSize: 9, fontWeight: '800' },
   count: { fontSize: 13, fontWeight: '500', paddingHorizontal: 16, marginBottom: 8 },
 
   card: {
@@ -273,4 +342,17 @@ const s = StyleSheet.create({
   dateHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, marginTop: 14, marginBottom: 4 },
   dateHeaderText: { fontSize: 12, fontWeight: '700', letterSpacing: 0.3 },
   dateHeaderLine: { flex: 1, height: 1 },
+
+  filtersScroll: { height: 48, flexGrow: 0 },
+  filtersRow: { flexDirection: 'row', gap: 8, paddingHorizontal: 16, alignItems: 'center', height: 48 },
+  chip: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    paddingHorizontal: 12, height: 32, borderRadius: 16,
+    borderWidth: 1.5,
+  },
+  chipCheck: {
+    width: 13, height: 13, borderRadius: 3, borderWidth: 1.5,
+    justifyContent: 'center', alignItems: 'center',
+  },
+  chipText: { fontSize: 13, fontWeight: '600' },
 });

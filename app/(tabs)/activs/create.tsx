@@ -35,6 +35,7 @@ export default function CreateActivScreen() {
   const [loadingData, setLoadingData] = useState(true);
 
   const [openPicker, setOpenPicker] = useState<'org' | 'drug' | null>(null);
+  const [drugQuery, setDrugQuery] = useState('');
 
   const loadRefs = useCallback(async () => {
     try {
@@ -108,6 +109,7 @@ export default function CreateActivScreen() {
             selectedId={orgId}
             onSelect={(id) => { setOrgId(id); setOpenPicker(null); }}
             t={t}
+            searchable
           />
         )}
       </FieldBlock>
@@ -151,27 +153,46 @@ export default function CreateActivScreen() {
         />
         {openPicker === 'drug' && (
           <View style={[s.drugPicker, { backgroundColor: t.card, borderColor: t.border }]}>
-            {drugs.map((d) => (
-              <TouchableOpacity
-                key={d.drugId}
-                style={[s.drugItem, { borderBottomColor: t.border }]}
-                onPress={() => toggleDrug(d.drugId)}
-              >
-                <View style={[
-                  s.checkbox,
-                  { borderColor: selectedDrugIds.includes(d.drugId) ? palette.blue : t.border },
-                  selectedDrugIds.includes(d.drugId) && { backgroundColor: palette.blue },
-                ]}>
-                  {selectedDrugIds.includes(d.drugId) && (
-                    <Ionicons name="checkmark" size={12} color="#fff" />
-                  )}
-                </View>
-                <View style={s.drugInfo}>
-                  <Text style={[s.drugName, { color: t.text }]}>{d.drugName}</Text>
-                  {d.brand ? <Text style={[s.drugBrand, { color: t.sub }]}>{d.brand}</Text> : null}
-                </View>
-              </TouchableOpacity>
-            ))}
+            <View style={[s.drugSearchWrap, { borderBottomColor: t.border }]}>
+              <Ionicons name="search" size={16} color={t.placeholder} />
+              <TextInput
+                style={[s.drugSearchInput, { color: t.text }]}
+                value={drugQuery}
+                onChangeText={setDrugQuery}
+                placeholder="Поиск препарата..."
+                placeholderTextColor={t.placeholder}
+              />
+              {drugQuery ? (
+                <TouchableOpacity onPress={() => setDrugQuery('')}>
+                  <Ionicons name="close-circle" size={16} color={t.placeholder} />
+                </TouchableOpacity>
+              ) : null}
+            </View>
+            <ScrollView nestedScrollEnabled keyboardShouldPersistTaps="handled">
+              {drugs
+                .filter((d) => !drugQuery || d.drugName.toLowerCase().includes(drugQuery.toLowerCase()))
+                .map((d) => (
+                  <TouchableOpacity
+                    key={d.drugId}
+                    style={[s.drugItem, { borderBottomColor: t.border }]}
+                    onPress={() => toggleDrug(d.drugId)}
+                  >
+                    <View style={[
+                      s.checkbox,
+                      { borderColor: selectedDrugIds.includes(d.drugId) ? palette.blue : t.border },
+                      selectedDrugIds.includes(d.drugId) && { backgroundColor: palette.blue },
+                    ]}>
+                      {selectedDrugIds.includes(d.drugId) && (
+                        <Ionicons name="checkmark" size={12} color="#fff" />
+                      )}
+                    </View>
+                    <View style={s.drugInfo}>
+                      <Text style={[s.drugName, { color: t.text }]}>{d.drugName}</Text>
+                      {d.brand ? <Text style={[s.drugBrand, { color: t.sub }]}>{d.brand}</Text> : null}
+                    </View>
+                  </TouchableOpacity>
+                ))}
+            </ScrollView>
           </View>
         )}
       </FieldBlock>
@@ -226,8 +247,13 @@ const s = StyleSheet.create({
   modalDone: { fontSize: 16, fontWeight: '700' },
 
   drugPicker: {
-    borderWidth: 1.5, borderRadius: 14, marginTop: 6, maxHeight: 240, overflow: 'hidden',
+    borderWidth: 1.5, borderRadius: 14, marginTop: 6, maxHeight: 280,
   },
+  drugSearchWrap: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    paddingHorizontal: 12, paddingVertical: 8, borderBottomWidth: 1,
+  },
+  drugSearchInput: { flex: 1, fontSize: 14, height: 36 },
   drugItem: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 14, paddingVertical: 12, borderBottomWidth: 1 },
   checkbox: {
     width: 22, height: 22, borderRadius: 6, borderWidth: 2,
